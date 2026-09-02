@@ -250,12 +250,10 @@ const AuthEngine = {
       try {
         this.currentUser = JSON.parse(saved);
       } catch (e) {
-        this.currentUser = this.demoAccounts.citizen;
+        this.currentUser = null;
       }
     } else {
-      // Default to citizen demo account for seamless experience
-      this.currentUser = this.demoAccounts.citizen;
-      this.saveSession();
+      this.currentUser = null;
     }
     this.syncUserWithApp();
   },
@@ -348,24 +346,25 @@ const AuthEngine = {
   },
 
   /**
-   * Switch Login Role selector
+   * Switch Login Role selector on Auth screen
    */
-  setRole(role) {
-    this.selectedRole = role;
-    document.querySelectorAll('.auth-role-pill').forEach(pill => {
-      pill.classList.toggle('active', pill.dataset.role === role);
+  switchAuthRole(role) {
+    this.selectedRole = role || 'citizen';
+    ['citizen', 'driver', 'officer'].forEach(r => {
+      const btn = document.getElementById(`auth-role-btn-${r}`);
+      if (btn) btn.classList.toggle('active', r === this.selectedRole);
     });
   },
 
   /**
    * Switch between Mobile OTP and Email Login Tabs
    */
-  setLoginTab(tab) {
-    this.activeLoginTab = tab;
-    const tabOtp = document.getElementById('auth-tab-otp');
-    const tabEmail = document.getElementById('auth-tab-email');
-    const secOtp = document.getElementById('auth-section-otp');
-    const secEmail = document.getElementById('auth-section-email');
+  switchAuthTab(tab) {
+    this.activeLoginTab = tab || 'otp';
+    const tabOtp = document.getElementById('auth-method-tab-otp');
+    const tabEmail = document.getElementById('auth-method-tab-email');
+    const secOtp = document.getElementById('auth-sec-otp');
+    const secEmail = document.getElementById('auth-sec-email');
 
     if (tab === 'otp') {
       if (tabOtp) tabOtp.classList.add('active');
@@ -380,11 +379,55 @@ const AuthEngine = {
     }
   },
 
+  emailAuthMode: 'login', // 'login' | 'signup'
+
+  /**
+   * Switch between Email Login and Email Signup
+   */
+  switchEmailAuthMode(mode) {
+    this.emailAuthMode = mode || 'login';
+    const btnLogin = document.getElementById('auth-email-mode-login');
+    const btnSignup = document.getElementById('auth-email-mode-signup');
+    const grpName = document.getElementById('auth-group-name');
+    const grpWard = document.getElementById('auth-group-ward');
+    const submitBtn = document.getElementById('auth-email-submit-btn');
+
+    if (mode === 'signup') {
+      if (btnLogin) btnLogin.classList.remove('active');
+      if (btnSignup) btnSignup.classList.add('active');
+      if (grpName) grpName.style.display = 'block';
+      if (grpWard) grpWard.style.display = 'block';
+      if (submitBtn) submitBtn.textContent = 'Create Account (+100 Eco Points) 🌟';
+    } else {
+      if (btnLogin) btnLogin.classList.add('active');
+      if (btnSignup) btnSignup.classList.remove('active');
+      if (grpName) grpName.style.display = 'none';
+      if (grpWard) grpWard.style.display = 'none';
+      if (submitBtn) submitBtn.textContent = 'Sign In with Email ➜';
+    }
+  },
+
+  otpStep: 'send', // 'send' | 'verify'
+
+  /**
+   * Handle primary OTP button click (Send OTP vs Verify OTP)
+   */
+  handleOtpPrimaryAction() {
+    const verifyBox = document.getElementById('auth-otp-verify-box');
+    const isVerifyVisible = verifyBox && verifyBox.style.display !== 'none';
+
+    if (!isVerifyVisible) {
+      this.requestMobileOTP();
+    } else {
+      this.submitMobileOTP();
+    }
+  },
+
   /**
    * Send Mobile OTP
    */
-  sendMobileOTP() {
-    const phoneInput = document.getElementById('auth-mobile-input');
+  requestMobileOTP() {
+    const phoneInput = document.getElementById('auth-phone-input');
     const phone = phoneInput ? phoneInput.value.trim() : '';
 
     if (!phone || phone.length < 10) {
@@ -395,173 +438,195 @@ const AuthEngine = {
     }
 
     this.pendingPhone = phone;
-    this.pendingOTP = "4920"; // Simulated deterministic OTP for instant testing
+    this.pendingOTP = "4920";
 
-    // Open OTP Verification Modal
-    if (typeof UIComponents !== 'undefined' && typeof CityAssist !== 'undefined') {
-      CityAssist.openModal(UIComponents.renderOTPVerificationModal(phone, this.pendingOTP));
+    const verifyBox = document.getElementById('auth-otp-verify-box');
+    const primaryBtn = document.getElementById('auth-otp-primary-btn');
+    if (verifyBox) verifyBox.style.display = 'block';
+    if (primaryBtn) primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.showToast(`📩 OTP sent to +91 ${phone}! Demo Code: 4920 🔑`);
+    }
+
+    // Auto-focus first digit
+    setTimeout(() => {
+      const d1 = document.getElementById('auth-otp-1');
+      if (d1) d1.focus();
+    }, 100);
+  },
+
+  onOtpInput(index) {
+    const current = document.getElementById(`auth-otp-${index}`);
+    if (current && current.value.length === 1 && index < 4) {
+      const next = document.getElementById(`auth-otp-${index + 1}`);
+      if (next) next.focus();
     }
   },
 
   /**
-   * Verify entered 4-digit OTP
+   * Verify entered OTP from Auth screen
    */
-  verifyOTP() {
-    const otp1 = document.getElementById('otp-digit-1')?.value || '';
-    const otp2 = document.getElementById('otp-digit-2')?.value || '';
-    const otp3 = document.getElementById('otp-digit-3')?.value || '';
-    const otp4 = document.getElementById('otp-digit-4')?.value || '';
-    const fullOtp = `${otp1}${otp2}${otp3}${otp4}`;
+  submitMobileOTP() {
+    const o1 = document.getElementById('auth-otp-1')?.value || '';
+    const o2 = document.getElementById('auth-otp-2')?.value || '';
+    const o3 = document.getElementById('auth-otp-3')?.value || '';
+    const o4 = document.getElementById('auth-otp-4')?.value || '';
+    const code = `${o1}${o2}${o3}${o4}`;
 
-    if (fullOtp.length !== 4) {
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("⚠️ Please enter the complete 4-digit OTP");
-      }
+    if (code.length !== 4) {
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter the complete 4-digit OTP");
       return;
     }
 
-    // Match OTP (or accept demo 4920)
-    if (fullOtp === this.pendingOTP || fullOtp === "4920" || fullOtp === "1234") {
-      // Find matching demo account or create session
-      let account = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
+    if (code === this.pendingOTP || code === "4920" || code === "1234") {
+      let baseAcc = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
       this.currentUser = {
-        ...account,
-        phone: `+91 ${this.pendingPhone}`
+        ...baseAcc,
+        phone: `+91 ${this.pendingPhone || '9876543210'}`,
+        role: this.selectedRole || 'citizen'
       };
       this.saveSession();
 
       if (typeof CityAssist !== 'undefined') {
-        CityAssist.closeModal();
-        CityAssist.showToast(`✓ Phone Verified! Welcome back, ${this.currentUser.name} 🎉`);
-        
-        if (this.selectedRole === 'driver') {
-          CityAssist.navigateTo('driver');
-        } else if (this.selectedRole === 'officer') {
-          CityAssist.navigateTo('municipality');
-        } else {
-          CityAssist.navigateTo('home');
-        }
+        CityAssist.showToast(`✓ Phone Verified! Welcome, ${this.currentUser.name} 🎉`);
+        this.routeAfterAuth();
       }
     } else {
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("❌ Incorrect OTP. Hint: Use demo OTP 4920");
-      }
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("❌ Incorrect OTP. Demo code is 4920");
     }
   },
 
   /**
-   * Email & Password Login
+   * Email & Password Sign In or Sign Up
    */
-  loginWithEmail() {
-    const emailInput = document.getElementById('auth-email-input');
-    const passInput = document.getElementById('auth-password-input');
+  submitEmailAuth() {
+    const emailInput = document.getElementById('auth-email-val');
+    const passInput = document.getElementById('auth-pass-val');
+    const nameInput = document.getElementById('auth-fullname-input');
+    const wardSelect = document.getElementById('auth-ward-select');
 
     const email = emailInput ? emailInput.value.trim() : '';
     const pass = passInput ? passInput.value.trim() : '';
+    const name = nameInput ? nameInput.value.trim() : '';
+    const ward = wardSelect ? wardSelect.value : 'Ward 2 (Samta Colony)';
 
     if (!email || !email.includes('@')) {
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("⚠️ Please enter a valid email address");
-      }
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter a valid email address");
       return;
     }
     if (!pass || pass.length < 4) {
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Password must be at least 4 characters");
+      return;
+    }
+
+    if (this.emailAuthMode === 'signup') {
+      if (!name || name.length < 2) {
+        if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter your Full Name for registration");
+        return;
+      }
+
+      this.currentUser = {
+        id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: name,
+        phone: "+91 98765 43210",
+        email: email,
+        role: this.selectedRole || 'citizen',
+        roleLabel: this.selectedRole === 'driver' ? 'Municipal Driver' : this.selectedRole === 'officer' ? 'Civic Officer' : 'Resident Citizen',
+        ward: ward,
+        address: "Samta Colony, Talegaon Dabhade",
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`,
+        points: 100, // Welcome points
+        badgesCount: 1,
+        co2SavedKg: 0,
+        segregationScore: "100%",
+        authProvider: "email"
+      };
+
+      // Try registering in Supabase if client is ready
+      if (typeof CloudRealtime !== 'undefined' && CloudRealtime.supabaseClient) {
+        try {
+          CloudRealtime.supabaseClient.auth.signUp({ email, password: pass }).catch(() => {});
+        } catch (e) {}
+      }
+
+      this.saveSession();
       if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("⚠️ Password must be at least 4 characters");
+        CityAssist.showToast(`🎉 Account Created! Welcome, ${name} (+100 Eco Points) 🌟`);
+        this.routeAfterAuth();
       }
-      return;
-    }
+    } else {
+      // Sign In
+      let baseAcc = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
+      this.currentUser = {
+        ...baseAcc,
+        email: email,
+        role: this.selectedRole || 'citizen'
+      };
 
-    // Authenticate
-    let account = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
-    this.currentUser = {
-      ...account,
-      email: email
-    };
-    this.saveSession();
+      if (typeof CloudRealtime !== 'undefined' && CloudRealtime.supabaseClient) {
+        try {
+          CloudRealtime.supabaseClient.auth.signInWithPassword({ email, password: pass }).catch(() => {});
+        } catch (e) {}
+      }
 
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`✓ Welcome back, ${this.currentUser.name}!`);
-      
-      if (this.selectedRole === 'driver') {
-        CityAssist.navigateTo('driver');
-      } else if (this.selectedRole === 'officer') {
-        CityAssist.navigateTo('municipality');
-      } else {
-        CityAssist.navigateTo('home');
+      this.saveSession();
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast(`✓ Welcome back, ${this.currentUser.name}!`);
+        this.routeAfterAuth();
       }
     }
   },
 
   /**
-   * Register a new user
+   * Route user to their appropriate dashboard after successful login
    */
-  handleSignup() {
-    const name = document.getElementById('signup-name-input')?.value.trim();
-    const phone = document.getElementById('signup-phone-input')?.value.trim();
-    const email = document.getElementById('signup-email-input')?.value.trim();
-    const ward = document.getElementById('signup-ward-select')?.value || 'Ward 2';
-    const address = document.getElementById('signup-address-input')?.value.trim() || 'Samta Colony, Talegaon';
-    const role = document.querySelector('input[name="signup-role"]:checked')?.value || 'citizen';
-
-    if (!name || name.length < 2) {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter your full name");
-      return;
-    }
-    if (!phone || phone.length < 10) {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter a valid 10-digit mobile number");
-      return;
-    }
-
-    const roleLabels = {
-      citizen: 'Resident Citizen',
-      driver: 'Municipal Driver',
-      officer: 'Ward Officer'
-    };
-
-    this.currentUser = {
-      id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: name,
-      phone: phone.startsWith('+91') ? phone : `+91 ${phone}`,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-      role: role,
-      roleLabel: roleLabels[role] || 'Resident Citizen',
-      ward: `${ward} (Talegaon Dabhade)`,
-      address: address,
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80",
-      points: 100, // Signup welcome bonus!
-      badgesCount: 1,
-      co2SavedKg: 0,
-      segregationScore: "100%"
-    };
-
-    this.saveSession();
-
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`🎉 Registration Complete! +100 Welcome Points awarded 🌟`);
-      
-      if (role === 'driver') {
-        CityAssist.navigateTo('driver');
-      } else if (role === 'officer') {
-        CityAssist.navigateTo('municipality');
-      } else {
-        CityAssist.navigateTo('home');
-      }
+  routeAfterAuth() {
+    if (typeof CityAssist === 'undefined') return;
+    const role = (this.currentUser && this.currentUser.role) || 'citizen';
+    if (role === 'driver') {
+      CityAssist.navigateTo('driver');
+    } else if (role === 'officer') {
+      CityAssist.navigateTo('municipality');
+    } else {
+      CityAssist.navigateTo('home');
     }
   },
 
   /**
-   * User Logout / Switch to Default Resident
+   * Quick-login to a demo profile from Auth screen
+   */
+  quickLoginDemo(role = 'citizen') {
+    const account = this.demoAccounts[role] || this.demoAccounts.citizen;
+    this.currentUser = { ...account };
+    this.saveSession();
+
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.showToast(`Logged in as ${account.name} (${account.roleLabel}) 🚀`);
+      this.routeAfterAuth();
+    }
+  },
+
+  /**
+   * User Logout: Clears active session and routes to Auth screen
    */
   logout() {
-    this.currentUser = this.demoAccounts.citizen;
-    this.saveSession();
+    this.currentUser = null;
+    localStorage.removeItem('cityassist_active_session');
+    localStorage.removeItem('cityassist_is_logged_in');
+    
+    // Sign out from Supabase if connected
+    if (typeof CloudRealtime !== 'undefined' && CloudRealtime.supabaseClient) {
+      try {
+        CloudRealtime.supabaseClient.auth.signOut().catch(() => {});
+      } catch (e) {}
+    }
 
     if (typeof CityAssist !== 'undefined') {
       CityAssist.closeModal();
       CityAssist.closeDrawer();
-      CityAssist.showToast("Account reset to default resident. 👋");
-      CityAssist.navigateTo('home');
+      CityAssist.showToast("Signed out successfully 👋");
+      CityAssist.navigateTo('auth');
     }
   }
 };

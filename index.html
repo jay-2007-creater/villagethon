@@ -36,6 +36,167 @@
     <!-- App Container with Screen Router -->
     <div class="screens-container" id="screens-container">
 
+          <!-- 0. AUTHENTICATION & LOGIN / SIGNUP SCREEN -->
+          <section class="screen-view" id="screen-auth">
+            <div class="auth-screen-container">
+              <!-- Auth Hero Banner -->
+              <div class="auth-hero-banner">
+                <div class="auth-logo-row">
+                  <div class="auth-logo-badge">🌿</div>
+                  <div class="auth-swachh-pill">🇮🇳 Swachh Bharat Mission</div>
+                </div>
+                <h1 class="auth-title">CityAssist</h1>
+                <p class="auth-subtitle">Smart Civic Waste & Live Fleet Operations</p>
+                <div class="auth-city-tag">📍 Talegaon Dabhade Municipal Council</div>
+              </div>
+
+              <div class="auth-content-card">
+                <!-- Role Selection -->
+                <div class="auth-role-select-box">
+                  <label class="auth-field-label">Select Your Role</label>
+                  <div class="auth-role-tabs">
+                    <button type="button" class="auth-role-tab active" id="auth-role-btn-citizen" onclick="AuthEngine.switchAuthRole('citizen')">
+                      <span class="role-emoji">👤</span>
+                      <span class="role-text">Resident</span>
+                    </button>
+                    <button type="button" class="auth-role-tab" id="auth-role-btn-driver" onclick="AuthEngine.switchAuthRole('driver')">
+                      <span class="role-emoji">🚚</span>
+                      <span class="role-text">Driver</span>
+                    </button>
+                    <button type="button" class="auth-role-tab" id="auth-role-btn-officer" onclick="AuthEngine.switchAuthRole('officer')">
+                      <span class="role-emoji">🏛️</span>
+                      <span class="role-text">Officer</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Auth Mode Tabs (Phone OTP / Email / Google) -->
+                <div class="auth-method-switcher">
+                  <button type="button" class="auth-method-btn active" id="auth-method-tab-otp" onclick="AuthEngine.switchAuthTab('otp')">
+                    📱 Mobile OTP
+                  </button>
+                  <button type="button" class="auth-method-btn" id="auth-method-tab-email" onclick="AuthEngine.switchAuthTab('email')">
+                    📧 Email / Pass
+                  </button>
+                </div>
+
+                <!-- ═══════ 1. MOBILE OTP SECTION ═══════ -->
+                <div id="auth-sec-otp" class="auth-method-section">
+                  <div class="auth-form-group">
+                    <label class="auth-field-label" for="auth-phone-input">Mobile Number</label>
+                    <div class="auth-phone-input-row">
+                      <span class="auth-country-code">🇮🇳 +91</span>
+                      <input type="tel" id="auth-phone-input" class="auth-text-input" placeholder="98765 43210" maxlength="10" value="9876543210">
+                    </div>
+                  </div>
+
+                  <!-- OTP Digits Box (Auto revealed after send OTP) -->
+                  <div id="auth-otp-verify-box" style="display:none; margin-top:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                      <label class="auth-field-label" style="margin:0;">Enter 4-Digit Verification Code</label>
+                      <span style="font-size:0.72rem; color:#15803D; font-weight:800; background:#DCFCE7; padding:2px 8px; border-radius:10px;">Demo: 4920</span>
+                    </div>
+                    <div class="auth-otp-inputs-row">
+                      <input type="tel" id="auth-otp-1" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(1)" value="4">
+                      <input type="tel" id="auth-otp-2" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(2)" value="9">
+                      <input type="tel" id="auth-otp-3" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(3)" value="2">
+                      <input type="tel" id="auth-otp-4" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(4)" value="0">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748B; margin-top:6px;">
+                      <span>Didn't receive code?</span>
+                      <button type="button" onclick="AuthEngine.requestMobileOTP()" style="background:none; border:none; color:#0F7943; font-weight:800; cursor:pointer; padding:0;">Resend OTP</button>
+                    </div>
+                  </div>
+
+                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()">
+                    Send Verification OTP ➜
+                  </button>
+                </div>
+
+                <!-- ═══════ 2. EMAIL & PASSWORD SECTION ═══════ -->
+                <div id="auth-sec-email" class="auth-method-section" style="display:none;">
+                  <!-- Sign In vs Sign Up Toggle -->
+                  <div class="auth-sub-toggle">
+                    <button type="button" class="sub-toggle-btn active" id="auth-email-mode-login" onclick="AuthEngine.switchEmailAuthMode('login')">Sign In</button>
+                    <button type="button" class="sub-toggle-btn" id="auth-email-mode-signup" onclick="AuthEngine.switchEmailAuthMode('signup')">Create Account</button>
+                  </div>
+
+                  <!-- Signup Name Field (Shown only on signup mode) -->
+                  <div class="auth-form-group" id="auth-group-name" style="display:none;">
+                    <label class="auth-field-label" for="auth-fullname-input">Full Name</label>
+                    <input type="text" id="auth-fullname-input" class="auth-text-input" placeholder="e.g. Siddhant Ramteke">
+                  </div>
+
+                  <!-- Email Address -->
+                  <div class="auth-form-group">
+                    <label class="auth-field-label" for="auth-email-val">Email Address</label>
+                    <input type="email" id="auth-email-val" class="auth-text-input" placeholder="name@gmail.com" value="siddhantramteke06@gmail.com">
+                  </div>
+
+                  <!-- Password -->
+                  <div class="auth-form-group">
+                    <label class="auth-field-label" for="auth-pass-val">Password</label>
+                    <input type="password" id="auth-pass-val" class="auth-text-input" placeholder="••••••••" value="cityassist2026">
+                  </div>
+
+                  <!-- Ward / Locality (Signup only) -->
+                  <div class="auth-form-group" id="auth-group-ward" style="display:none;">
+                    <label class="auth-field-label" for="auth-ward-select">Municipal Ward</label>
+                    <select id="auth-ward-select" class="auth-text-input">
+                      <option value="Ward 1 (Talegaon Station)">Ward 1 - Talegaon Railway Station</option>
+                      <option value="Ward 2 (Samta Colony)" selected>Ward 2 - Samta Colony / Municipal Garden</option>
+                      <option value="Ward 3 (Jijamata Chowk)">Ward 3 - Jijamata Chowk / Market</option>
+                      <option value="Ward 4 (Bhandara Road)">Ward 4 - Bhandara Road</option>
+                    </select>
+                  </div>
+
+                  <button type="button" id="auth-email-submit-btn" class="auth-primary-submit-btn" onclick="AuthEngine.submitEmailAuth()">
+                    Sign In with Email ➜
+                  </button>
+                </div>
+
+                <!-- ═══════ 3. GOOGLE SIGN-IN BUTTON ═══════ -->
+                <div class="auth-divider">
+                  <span>OR CONTINUE WITH</span>
+                </div>
+
+                <button type="button" class="auth-google-btn" onclick="AuthEngine.triggerGoogleSignIn()">
+                  <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
+
+                <!-- ═══════ 4. ONE-TAP DEMO TEST ACCOUNTS ═══════ -->
+                <div class="auth-demo-section">
+                  <div class="auth-demo-header">
+                    <span style="font-size:0.75rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">⚡ Instant 1-Tap Demo Access</span>
+                  </div>
+                  <div class="auth-demo-chips">
+                    <button type="button" class="demo-chip-btn" onclick="AuthEngine.quickLoginDemo('citizen')">
+                      <span>👤 Resident (Siddhant)</span>
+                    </button>
+                    <button type="button" class="demo-chip-btn" onclick="AuthEngine.quickLoginDemo('driver')">
+                      <span>🚚 Driver (Ramesh)</span>
+                    </button>
+                    <button type="button" class="demo-chip-btn" onclick="AuthEngine.quickLoginDemo('officer')">
+                      <span>🏛️ Officer (Prakash)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Footer Terms -->
+                <p class="auth-footer-terms">
+                  By continuing, you agree to PMC Civic Digital Terms & Privacy Policy.<br>
+                  Talegaon Dabhade Municipal Swachh Bharat Initiative.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <!-- 1. PROFILE SCREEN -->
           <section class="screen-view" id="screen-profile">
             <div class="screen-header green-theme">
@@ -317,6 +478,14 @@
                     <span style="color:#15803D; font-weight:800; font-size:0.9rem;">➜</span>
                   </div>
                 </div>
+              </div>
+
+              <!-- ═══════ ACCOUNT & LOGOUT ACTIONS ═══════ -->
+              <div style="margin-top:16px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;">
+                <button type="button" onclick="AuthEngine.logout()" style="width:100%; background:#FEF2F2; color:#DC2626; border:1.5px solid #FECACA; padding:12px; border-radius:12px; font-weight:800; font-size:0.88rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Log Out / Switch Account
+                </button>
               </div>
 
               <!-- Quick Banner Action -->

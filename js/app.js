@@ -18,8 +18,21 @@ const CityAssist = {
     this.syncActiveAddressUI();
     if (typeof AuthEngine !== 'undefined') {
       AuthEngine.restoreSession();
+      if (AuthEngine.isLoggedIn()) {
+        const role = (AuthEngine.currentUser && AuthEngine.currentUser.role) || 'citizen';
+        if (role === 'driver') {
+          this.navigateTo('driver');
+        } else if (role === 'officer') {
+          this.navigateTo('municipality');
+        } else {
+          this.navigateTo('home');
+        }
+      } else {
+        this.navigateTo('auth');
+      }
+    } else {
+      this.navigateTo('home');
     }
-    this.navigateTo('home');
   },
 
   bindEvents() {
@@ -77,7 +90,7 @@ const CityAssist = {
 
     // Hide or Show Bottom Tab Bar on Auth & Fullscreen Screens
     const bottomBars = document.querySelectorAll('.bottom-tab-bar, .bottom-navigation-bar');
-    const isAuthOrFs = screenId.startsWith('auth-') || screenId === 'fullscreen-map';
+    const isAuthOrFs = screenId === 'auth' || screenId.startsWith('auth-') || screenId === 'fullscreen-map';
     bottomBars.forEach(bar => {
       bar.style.display = isAuthOrFs ? 'none' : 'flex';
     });
