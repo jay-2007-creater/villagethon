@@ -1762,7 +1762,8 @@
           </section>
 
           <!-- 6. DRIVER DASHBOARD SCREEN (Driver Mode) -->
-          <section class="screen-view" id="screen-driver">
+          <!-- 6. DRIVER HUD & ROUTE TRACKING SCREEN -->
+          <section class="screen-view" id="screen-driver" style="display:none; flex-direction:column; height:100%; overflow:hidden;">
             <div class="screen-header driver-theme">
               <button class="icon-action-btn back-btn" onclick="CityAssist.navigateTo('home')" title="Back to Citizen Home">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -1779,7 +1780,7 @@
               </button>
             </div>
 
-            <div class="screen-content driver-page-content" style="position:relative; overflow:hidden;">
+            <div class="screen-content driver-page-content" style="position:relative; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:160px; flex:1;">
               <!-- ── FEATURE 3: ROUTE COMPLETION OVERLAY ── -->
               <div id="route-completion-overlay" style="display:none; position:absolute; inset:0; z-index:9999; background:linear-gradient(160deg,#064E3B 0%,#065F46 50%,#047857 100%); color:#FFF; padding:32px 24px; flex-direction:column; align-items:center; justify-content:center; text-align:center; border-radius:0; overflow:hidden;">
                 <!-- Confetti-like decorative circles -->

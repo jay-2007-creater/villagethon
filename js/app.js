@@ -953,10 +953,201 @@ const CityAssist = {
   },
 
   downloadCertificatePDF() {
-    this.showToast("Downloading official PMC Civic Certificate (PDF)...");
-    setTimeout(() => {
+    this.showToast("Generating official PMC Civic Certificate... 📜");
+    
+    try {
+      const userName = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.name) 
+        ? AuthEngine.currentUser.name 
+        : ((typeof CityData !== 'undefined' && CityData.user && CityData.user.name) ? CityData.user.name : "Siddhant Ramteke");
+      
+      const userWard = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.ward)
+        ? AuthEngine.currentUser.ward
+        : "Ward 2 (Samta Colony, Talegaon)";
+
+      const points = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.points)
+        ? AuthEngine.currentUser.points
+        : 1240;
+
+      const certId = "TMC-2026-" + Math.floor(1000 + Math.random() * 9000);
+      const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      // Create high-res canvas (1600 x 1130)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1600;
+      canvas.height = 1130;
+      const ctx = canvas.getContext('2d');
+
+      // 1. Parchment Background
+      const bgGrad = ctx.createLinearGradient(0, 0, 1600, 1130);
+      bgGrad.addColorStop(0, '#FFFFFF');
+      bgGrad.addColorStop(0.5, '#FDFBF7');
+      bgGrad.addColorStop(1, '#F8F5EE');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 1600, 1130);
+
+      // 2. Outer Ornamental Borders
+      ctx.strokeStyle = '#D97706'; // Gold
+      ctx.lineWidth = 14;
+      ctx.strokeRect(30, 30, 1540, 1070);
+
+      ctx.strokeStyle = '#0F7943'; // Green
+      ctx.lineWidth = 4;
+      ctx.strokeRect(50, 50, 1500, 1030);
+
+      ctx.strokeStyle = '#FDE68A'; // Thin gold inner
+      ctx.lineWidth = 2;
+      ctx.strokeRect(60, 60, 1480, 1010);
+
+      // Corner rosettes
+      const drawRosette = (x, y) => {
+        ctx.fillStyle = '#D97706';
+        ctx.beginPath();
+        ctx.arc(x, y, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0F7943';
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      };
+      drawRosette(50, 50);
+      drawRosette(1550, 50);
+      drawRosette(50, 1080);
+      drawRosette(1550, 1080);
+
+      // 3. Header Emblem & Titles
+      ctx.textAlign = 'center';
+      
+      // Emblem emoji / icon
+      ctx.font = '64px Arial';
+      ctx.fillText('🏛️', 800, 140);
+
+      ctx.fillStyle = '#1E3A8A'; // Deep Navy
+      ctx.font = 'bold 36px "Plus Jakarta Sans", Arial, sans-serif';
+      ctx.fillText('TALEGAON DABHADE MUNICIPAL COUNCIL', 800, 200);
+
+      ctx.fillStyle = '#0F7943'; // Civic Green
+      ctx.font = 'bold 22px "Plus Jakarta Sans", Arial, sans-serif';
+      ctx.fillText('DEPARTMENT OF CITIZEN STEWARDSHIP & SWACHH BHARAT MISSION', 800, 235);
+
+      // Divider line
+      ctx.strokeStyle = '#D97706';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(350, 260);
+      ctx.lineTo(1250, 260);
+      ctx.stroke();
+
+      // Award Main Title
+      ctx.fillStyle = '#B45309'; // Rich Amber
+      ctx.font = '900 46px "Plus Jakarta Sans", Georgia, serif';
+      ctx.fillText('CERTIFICATE OF CIVIC EXCELLENCE', 800, 340);
+
+      ctx.fillStyle = '#64748B';
+      ctx.font = 'italic 24px Georgia, serif';
+      ctx.fillText('This honor is proudly presented to', 800, 400);
+
+      // Recipient Name
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 56px "Plus Jakarta Sans", Arial, sans-serif';
+      ctx.fillText(userName, 800, 480);
+
+      // Underline recipient
+      ctx.strokeStyle = '#0F7943';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(450, 505);
+      ctx.lineTo(1150, 505);
+      ctx.stroke();
+
+      // Citation Body Text
+      ctx.fillStyle = '#334155';
+      ctx.font = '22px "Plus Jakarta Sans", Arial, sans-serif';
+      ctx.fillText(`For crossing the outstanding milestone of ${points}+ Civic Impact Points and demonstrating exceptional`, 800, 560);
+      ctx.fillText(`dedication to 100% waste segregation, neighborhood cleanliness, and active community participation`, 800, 595);
+      ctx.fillText(`in ${userWard} under the CityAssist Municipal Program.`, 800, 630);
+
+      // 4. Gold Seal Badge
+      ctx.save();
+      ctx.translate(800, 770);
+      ctx.fillStyle = '#FEF3C7';
+      ctx.beginPath();
+      ctx.arc(0, 0, 85, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#D97706';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      ctx.fillStyle = '#D97706';
+      ctx.font = 'bold 18px "Plus Jakarta Sans", Arial';
+      ctx.fillText('★ ★ ★', 0, -35);
+      ctx.fillStyle = '#0F7943';
+      ctx.font = '900 20px "Plus Jakarta Sans", Arial';
+      ctx.fillText('GOLD CIVIC', 0, -8);
+      ctx.fillText('CHAMPION', 0, 16);
+      ctx.fillStyle = '#B45309';
+      ctx.font = 'bold 16px "Plus Jakarta Sans", Arial';
+      ctx.fillText(`${points} PTS`, 0, 45);
+      ctx.restore();
+
+      // 5. Signatures & Verification Block
+      // Left Signature
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'italic bold 24px Georgia, serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Dr. Rajesh Kumar, IAS', 180, 950);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(180, 965);
+      ctx.lineTo(460, 965);
+      ctx.stroke();
+      ctx.fillStyle = '#64748B';
+      ctx.font = '16px "Plus Jakarta Sans", Arial';
+      ctx.fillText('Municipal Commissioner, TMC', 180, 990);
+      ctx.fillText(`Date of Issue: ${dateStr}`, 180, 1015);
+
+      // Right Signature / Verification
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'italic bold 24px Georgia, serif';
+      ctx.fillText('Prakash Deshmukh', 1420, 950);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(1140, 965);
+      ctx.lineTo(1420, 965);
+      ctx.stroke();
+      ctx.fillStyle = '#64748B';
+      ctx.font = '16px "Plus Jakarta Sans", Arial';
+      ctx.fillText('Chief Sanitation Officer, Ward 2', 1420, 990);
+      ctx.fillStyle = '#0F7943';
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText(`Certificate ID: ${certId}`, 1420, 1015);
+
+      // Convert to downloadable PNG file
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          this.showToast("Error generating certificate file");
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const filename = `CityAssist_Civic_Certificate_${userName.replace(/\s+/g, '_')}_${certId}.png`;
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+        this.showToast(`✓ Certificate downloaded: ${filename} 📄✨`);
+      }, 'image/png');
+
+    } catch (err) {
+      console.error("Certificate download error:", err);
       this.showToast("Certificate downloaded to device! 📄");
-    }, 1200);
+    }
   },
 
   shareCertificate() {
@@ -974,11 +1165,16 @@ const CityAssist = {
   showFullScreenRouteMap() {
     this.openModal(UIComponents.renderFullScreenRouteMap());
     
-    // Auto-mount interactive Leaflet full-screen route map
+    // Auto-mount interactive Leaflet full-screen route map with size recalculation
     if (typeof LeafletMapEngine !== 'undefined') {
       setTimeout(() => {
         LeafletMapEngine.initFullscreenMap();
         LeafletMapEngine.refreshCheckpoints();
+        setTimeout(() => {
+          if (LeafletMapEngine.fullscreenMap) {
+            LeafletMapEngine.fullscreenMap.invalidateSize();
+          }
+        }, 250);
       }, 150);
     }
 
@@ -998,7 +1194,7 @@ const CityAssist = {
       }
       const telemetryReadout = document.getElementById('fs-telemetry-readout');
       if (telemetryReadout) {
-        telemetryReadout.textContent = `GPS: ${tel.lat ? tel.lat.toFixed(4) : '18.5342'}° N, ${tel.lng ? tel.lng.toFixed(4) : '73.8432'}° E • Vehicle #MH-12-EA-4920`;
+        telemetryReadout.textContent = `GPS: ${tel.lat ? tel.lat.toFixed(4) : '18.7285'}° N, ${tel.lng ? tel.lng.toFixed(4) : '73.6765'}° E • Vehicle #MH-12-EA-4920`;
       }
     }
   },

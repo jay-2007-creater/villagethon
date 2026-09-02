@@ -994,58 +994,61 @@ const UIComponents = {
   },
 
   renderFullScreenRouteMap() {
-    const telemetry = (typeof GPSTrackerEngine !== 'undefined') ? GPSTrackerEngine.driverTelemetry : { lat: 18.5342, lng: 73.8432, speed: 22, progressPct: 45 };
-    const citizen = (typeof GPSTrackerEngine !== 'undefined') ? GPSTrackerEngine.citizenLocation : { lat: 18.5308, lng: 73.8474 };
+    const telemetry = (typeof GPSTrackerEngine !== 'undefined') ? GPSTrackerEngine.driverTelemetry : { lat: 18.7285, lng: 73.6765, speed: 22, progressPct: 45 };
+    const citizen = (typeof GPSTrackerEngine !== 'undefined') ? GPSTrackerEngine.citizenLocation : { lat: 18.7285, lng: 73.6765 };
     
     return `
       <div class="fs-map-modal-container">
         <!-- Top Modal Header Bar -->
-        <div class="fs-map-header">
-          <div class="fs-map-title-group">
-            <button class="fs-map-close-btn" onclick="CityAssist.closeModal()" title="Close Fullscreen Map">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <div class="fs-map-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #E2E8F0;">
+          <div class="fs-map-title-group" style="display:flex; align-items:center; gap:10px;">
+            <button class="fs-map-close-btn" onclick="CityAssist.closeModal()" title="Close Fullscreen Map" style="background:#F1F5F9; border:none; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#334155; cursor:pointer; font-weight:800; font-size:1.1rem;">
+              ✕
             </button>
             <div>
-              <h3 class="fs-map-main-title">Talegaon Ward 2 Route Map</h3>
-              <p class="fs-map-sub-title">Talegaon Dabhade • Station to Samta Colony</p>
+              <h3 class="fs-map-main-title" style="font-size:1.05rem; font-weight:800; color:#0F172A; margin:0;">Expanded Route Radar</h3>
+              <p class="fs-map-sub-title" style="font-size:0.75rem; color:#64748B; margin:2px 0 0 0;">Talegaon Dabhade • Station to Samta Colony</p>
             </div>
           </div>
-          <div class="fs-map-status-pill">
+          <div class="fs-map-status-pill" style="background:#DCFCE7; color:#15803D; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:5px;">
             <span class="pulse-dot-green"></span> Live GPS Fleet
           </div>
         </div>
 
-        <!-- Route Filter & Map Theme Selector Pills -->
-        <div class="fs-route-filter-bar" style="margin-bottom:6px;">
-          <button class="fs-route-chip active" id="chip-route-all" onclick="CityAssist.filterFullscreenRoute('all')">🗺️ All Routes (3)</button>
-          <button class="fs-route-chip" id="chip-route-4b" onclick="CityAssist.filterFullscreenRoute('4b')">🟢 Route 4B (Active)</button>
-          <button class="fs-route-chip" id="chip-route-4a" onclick="CityAssist.filterFullscreenRoute('4a')">🔵 Route 4A (Morning)</button>
-          <button class="fs-route-chip" id="chip-route-4c" onclick="CityAssist.filterFullscreenRoute('4c')">🟠 Route 4C (Commercial)</button>
+        <!-- Controls Bar: Route & Layers -->
+        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+          <!-- Route Filter Bar -->
+          <div class="fs-route-filter-bar" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;">
+            <button class="fs-route-chip active" id="chip-route-all" onclick="CityAssist.filterFullscreenRoute('all')">🗺️ All (3)</button>
+            <button class="fs-route-chip" id="chip-route-4b" onclick="CityAssist.filterFullscreenRoute('4b')">🟢 Route 4B (Active)</button>
+            <button class="fs-route-chip" id="chip-route-4a" onclick="CityAssist.filterFullscreenRoute('4a')">🔵 Route 4A</button>
+            <button class="fs-route-chip" id="chip-route-4c" onclick="CityAssist.filterFullscreenRoute('4c')">🟠 Route 4C</button>
+          </div>
+
+          <!-- Landmarks & Theme Bar -->
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+            <!-- Landmarks Category Filter Bar -->
+            <div style="display:flex; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none;">
+              <span style="font-size:0.68rem; font-weight:800; color:#64748B;">Places:</span>
+              <button type="button" class="landmark-filter-chip active" data-cat="all" onclick="LeafletMapEngine.filterLandmarkCategory('all')" style="background:#0F7943; color:#FFF; border:none; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🌟 All</button>
+              <button type="button" class="landmark-filter-chip" data-cat="college" onclick="LeafletMapEngine.filterLandmarkCategory('college')" style="background:#F3E8FF; color:#7E22CE; border:1px solid #D8B4FE; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🎓 Colleges</button>
+              <button type="button" class="landmark-filter-chip" data-cat="hospital" onclick="LeafletMapEngine.filterLandmarkCategory('hospital')" style="background:#FEE2E2; color:#DC2626; border:1px solid #FECACA; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🏥 Hospitals</button>
+              <button type="button" class="landmark-filter-chip" data-cat="shop" onclick="LeafletMapEngine.filterLandmarkCategory('shop')" style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🛒 Shops</button>
+            </div>
+
+            <!-- Map Theme Selector (100% Free, Zero API Key) -->
+            <div style="display:flex; align-items:center; gap:4px;">
+              <button class="map-theme-chip active" data-theme="osm" onclick="LeafletMapEngine.setMapTheme('osm')" style="padding:3px 7px; font-size:0.68rem;">🗺️ Map</button>
+              <button class="map-theme-chip" data-theme="clean" onclick="LeafletMapEngine.setMapTheme('clean')" style="padding:3px 7px; font-size:0.68rem;">🏙️ Clean</button>
+              <button class="map-theme-chip" data-theme="satellite" onclick="LeafletMapEngine.setMapTheme('satellite')" style="padding:3px 7px; font-size:0.68rem;">🛰️ Satellite</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Landmarks Category Filter Bar -->
-        <div style="display:flex; align-items:center; gap:5px; overflow-x:auto; padding:4px 0 6px 0; margin-bottom:6px; scrollbar-width:none;">
-          <span style="font-size:0.7rem; font-weight:800; color:#64748B; white-space:nowrap;">Landmarks:</span>
-          <button type="button" class="landmark-filter-chip active" data-cat="all" onclick="LeafletMapEngine.filterLandmarkCategory('all')" style="background:#0F7943; color:#FFF; border:none; padding:3px 8px; border-radius:10px; font-size:0.72rem; font-weight:800; cursor:pointer; white-space:nowrap;">🌟 All (20)</button>
-          <button type="button" class="landmark-filter-chip" data-cat="college" onclick="LeafletMapEngine.filterLandmarkCategory('college')" style="background:#F3E8FF; color:#7E22CE; border:1px solid #D8B4FE; padding:3px 8px; border-radius:10px; font-size:0.72rem; font-weight:800; cursor:pointer; white-space:nowrap;">🎓 Colleges</button>
-          <button type="button" class="landmark-filter-chip" data-cat="hospital" onclick="LeafletMapEngine.filterLandmarkCategory('hospital')" style="background:#FEE2E2; color:#DC2626; border:1px solid #FECACA; padding:3px 8px; border-radius:10px; font-size:0.72rem; font-weight:800; cursor:pointer; white-space:nowrap;">🏥 Hospitals</button>
-          <button type="button" class="landmark-filter-chip" data-cat="shop" onclick="LeafletMapEngine.filterLandmarkCategory('shop')" style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; padding:3px 8px; border-radius:10px; font-size:0.72rem; font-weight:800; cursor:pointer; white-space:nowrap;">🛒 Shops & Food</button>
-          <button type="button" class="landmark-filter-chip" data-cat="civic" onclick="LeafletMapEngine.filterLandmarkCategory('civic')" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:3px 8px; border-radius:10px; font-size:0.72rem; font-weight:800; cursor:pointer; white-space:nowrap;">🏛️ Civic/Transit</button>
-          <button type="button" id="btn-toggle-landmarks-fs" onclick="LeafletMapEngine.toggleLandmarks()" style="background:#DCFCE7; color:#15803D; border:1px solid #BBF7D0; padding:3px 8px; border-radius:10px; font-size:0.72rem; font-weight:800; cursor:pointer; white-space:nowrap;">👁️ Toggle</button>
-        </div>
-
-        <!-- Map Layer Switcher (100% Free, Zero API Key Required) -->
-        <div class="fs-theme-selector-bar">
-          <span style="font-size:0.72rem; font-weight:800; color:#64748B; margin-right:4px;">Layer:</span>
-          <button class="map-theme-chip active" data-theme="osm" onclick="LeafletMapEngine.setMapTheme('osm')">🗺️ OpenStreetMap</button>
-          <button class="map-theme-chip" data-theme="clean" onclick="LeafletMapEngine.setMapTheme('clean')">🏙️ Clean Streets</button>
-          <button class="map-theme-chip" data-theme="satellite" onclick="LeafletMapEngine.setMapTheme('satellite')">🛰️ Satellite View</button>
-        </div>
-
-        <!-- Fullscreen Interactive Leaflet & Vector Map Viewport -->
-        <div class="fs-map-viewport" style="height: 320px;">
+        <!-- Fullscreen Interactive Leaflet Map Viewport -->
+        <div class="fs-map-viewport" style="height: 380px; width: 100%; border-radius: 16px; position: relative; overflow: hidden; border: 1.5px solid #CBD5E1; box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
           <!-- Interactive Leaflet Map Container -->
-          <div id="fs-leaflet-map-view" style="width:100%; height:100%; border-radius:16px;"></div>
+          <div id="fs-leaflet-map-view" style="width:100%; height:100%;"></div>
 
           <!-- Fallback SVG Canvas -->
           <svg viewBox="0 0 500 360" class="fs-map-svg" id="fs-complete-routes-svg" style="display:none;">
