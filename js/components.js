@@ -1036,11 +1036,12 @@ const UIComponents = {
               <button type="button" class="landmark-filter-chip" data-cat="shop" onclick="LeafletMapEngine.filterLandmarkCategory('shop')" style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🛒 Shops</button>
             </div>
 
-            <!-- Map Theme Selector (100% Free, Zero API Key) -->
+            <!-- Map Theme Selector (Google Maps, Live Traffic, Satellite, OSM) -->
             <div style="display:flex; align-items:center; gap:4px;">
-              <button class="map-theme-chip active" data-theme="osm" onclick="LeafletMapEngine.setMapTheme('osm')" style="padding:3px 7px; font-size:0.68rem;">🗺️ Map</button>
-              <button class="map-theme-chip" data-theme="clean" onclick="LeafletMapEngine.setMapTheme('clean')" style="padding:3px 7px; font-size:0.68rem;">🏙️ Clean</button>
-              <button class="map-theme-chip" data-theme="satellite" onclick="LeafletMapEngine.setMapTheme('satellite')" style="padding:3px 7px; font-size:0.68rem;">🛰️ Satellite</button>
+              <button class="map-theme-chip active" data-theme="google_streets" onclick="LeafletMapEngine.setMapTheme('google_streets')" style="padding:3px 7px; font-size:0.68rem;">🌐 Google</button>
+              <button class="map-theme-chip" data-theme="google_traffic" onclick="LeafletMapEngine.setMapTheme('google_traffic')" style="padding:3px 7px; font-size:0.68rem;">🚦 Traffic</button>
+              <button class="map-theme-chip" data-theme="google_hybrid" onclick="LeafletMapEngine.setMapTheme('google_hybrid')" style="padding:3px 7px; font-size:0.68rem;">🛰️ Sat</button>
+              <button class="map-theme-chip" data-theme="osm" onclick="LeafletMapEngine.setMapTheme('osm')" style="padding:3px 7px; font-size:0.68rem;">🗺️ OSM</button>
             </div>
           </div>
         </div>

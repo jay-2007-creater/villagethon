@@ -296,8 +296,46 @@ const LeafletMapEngine = {
     }
   ],
 
-  // 100% Free, Zero-API-Key Map Tile Providers (No API Keys or Tokens Needed)
+  // Active Tile Layers
+  currentTileType: 'google_streets', // 'google_streets' | 'google_traffic' | 'google_hybrid' | 'osm' | 'satellite'
+  citizenTileLayer: null,
+  fullscreenTileLayer: null,
+  driverTileLayer: null,
+  muniTileLayer: null,
+  reportTileLayer: null,
+
   tileProviders: {
+    google_streets: {
+      url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      options: {
+        attribution: 'Map &copy; Google Maps',
+        maxZoom: 21,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }
+    },
+    google_traffic: {
+      url: 'https://mt1.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}',
+      options: {
+        attribution: 'Traffic &copy; Google Maps Live Traffic',
+        maxZoom: 21,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }
+    },
+    google_hybrid: {
+      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      options: {
+        attribution: 'Imagery &copy; Google Satellite with Labels',
+        maxZoom: 21,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }
+    },
+    satellite: {
+      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      options: {
+        attribution: 'Map &copy; High-Res Satellite Imagery with Labels',
+        maxZoom: 21
+      }
+    },
     osm: {
       url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       options: {
@@ -308,24 +346,9 @@ const LeafletMapEngine = {
     clean: {
       url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
       options: {
-        attribution: '&copy; OpenStreetMap contributors, Humanitarian Style',
+        attribution: '&copy; OpenStreetMap contributors',
         subdomains: 'abc',
         maxZoom: 19
-      }
-    },
-    carto_voyager: {
-      url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-      options: {
-        attribution: '&copy; OpenStreetMap contributors, Humanitarian Style',
-        subdomains: 'abc',
-        maxZoom: 19
-      }
-    },
-    satellite: {
-      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      options: {
-        attribution: 'Map &copy; High-Res Satellite Imagery with Labels',
-        maxZoom: 20
       }
     }
   },
@@ -333,24 +356,21 @@ const LeafletMapEngine = {
   init() {
     if (typeof L !== 'undefined') {
       this.isLoaded = true;
-      console.log("✓ Leaflet High-Detail Civic Maps Engine initialized with Landmark Layers");
+      console.log("✓ Google Maps & Leaflet High-Detail Civic Engine initialized");
     }
   },
 
   /**
-   * Switch Map Tile Theme (Zero API Key Required)
+   * Switch Map Tile Theme (Google Streets, Live Traffic, Google Satellite, OSM)
    */
   setMapTheme(themeName) {
-    if (!this.tileProviders[themeName]) themeName = 'osm';
+    if (!this.tileProviders[themeName]) themeName = 'google_streets';
     this.currentTileType = themeName;
     const provider = this.tileProviders[themeName];
 
-    // Normalize name for matching chips
-    const activeKey = (themeName === 'carto_voyager') ? 'clean' : themeName;
-
     // Update active UI chips
     document.querySelectorAll('.map-theme-chip').forEach(chip => {
-      chip.classList.toggle('active', chip.dataset.theme === themeName || chip.dataset.theme === activeKey);
+      chip.classList.toggle('active', chip.dataset.theme === themeName);
     });
 
     if (this.citizenMap && this.citizenTileLayer) {
@@ -372,12 +392,13 @@ const LeafletMapEngine = {
 
     if (typeof CityAssist !== 'undefined') {
       const names = {
-        osm: 'OpenStreetMap (Detailed)',
-        clean: 'Clean Street Map',
-        carto_voyager: 'Clean Street Map',
-        satellite: 'Satellite View (High-Res)'
+        google_streets: 'Google Maps (Streets & Localities)',
+        google_traffic: 'Google Maps (Live Traffic Flow 🚦)',
+        google_hybrid: 'Google Satellite (High-Res Aerial 🛰️)',
+        satellite: 'Google Satellite (High-Res Aerial 🛰️)',
+        osm: 'OpenStreetMap (Detailed)'
       };
-      CityAssist.showToast(`Map switched to ${names[themeName] || 'New Map Layer'} 🗺️`);
+      CityAssist.showToast(`Map switched to ${names[themeName] || 'Google Map Layer'} 🗺️`);
     }
   },
 

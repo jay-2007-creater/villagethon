@@ -734,10 +734,11 @@
               <div class="gt-live-map-card" style="margin-bottom:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                   <h3 class="gt-map-card-title" style="margin-bottom:0;">Live Fleet Radar</h3>
-                  <div style="display:flex; gap:6px; align-items:center;">
-                    <button type="button" class="map-theme-chip active" data-theme="osm" onclick="LeafletMapEngine.setMapTheme('osm')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🗺️ OSM</button>
-                    <button type="button" class="map-theme-chip" data-theme="clean" onclick="LeafletMapEngine.setMapTheme('clean')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🏙️ Clean</button>
-                    <button type="button" class="map-theme-chip" data-theme="satellite" onclick="LeafletMapEngine.setMapTheme('satellite')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🛰️ Sat</button>
+                  <div style="display:flex; gap:5px; align-items:center; overflow-x:auto; scrollbar-width:none;">
+                    <button type="button" class="map-theme-chip active" data-theme="google_streets" onclick="LeafletMapEngine.setMapTheme('google_streets')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🌐 Google</button>
+                    <button type="button" class="map-theme-chip" data-theme="google_traffic" onclick="LeafletMapEngine.setMapTheme('google_traffic')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🚦 Traffic</button>
+                    <button type="button" class="map-theme-chip" data-theme="google_hybrid" onclick="LeafletMapEngine.setMapTheme('google_hybrid')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🛰️ Sat</button>
+                    <button type="button" class="map-theme-chip" data-theme="osm" onclick="LeafletMapEngine.setMapTheme('osm')" style="padding:3px 8px; font-size:0.7rem; border-radius:8px;">🗺️ OSM</button>
                     <button type="button" onclick="CityAssist.showFullScreenRouteMap()" class="gt-expand-pill" style="background:#F0FDF4; border:1px solid #DCFCE7; color:#15803D; font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:8px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;">
                       <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
                       Expand
