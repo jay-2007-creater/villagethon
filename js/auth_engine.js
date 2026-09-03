@@ -59,6 +59,18 @@ const AuthEngine = {
     }
   },
 
+  // Firebase Web App Configuration for Google Auth
+  firebaseConfig: {
+    apiKey: "AIzaSyC5Byfu-hY6SvSmJhAOP1WiBqrXgu-K36I",
+    authDomain: "cityassist-7bad3.firebaseapp.com",
+    projectId: "cityassist-7bad3",
+    storageBucket: "cityassist-7bad3.firebasestorage.app",
+    messagingSenderId: "1034083253564",
+    appId: "1:1034083253564:web:29f7d95e28dfd9a499f239"
+  },
+  firebaseApp: null,
+  firebaseAuth: null,
+
   // Base Preset Google Accounts + Persistent User Accounts
   defaultGoogleAccounts: [
     {
@@ -97,8 +109,71 @@ const AuthEngine = {
   pendingPhone: '',
 
   init() {
+    this.initFirebase();
     this.loadCustomGoogleAccounts();
     this.restoreSession();
+  },
+
+  initFirebase() {
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps || !firebase.apps.length) {
+          this.firebaseApp = firebase.initializeApp(this.firebaseConfig);
+        } else {
+          this.firebaseApp = firebase.app();
+        }
+        if (firebase.auth) {
+          this.firebaseAuth = firebase.auth();
+          this.firebaseAuth.onAuthStateChanged((user) => {
+            if (user && !this.currentUser) {
+              this.handleFirebaseUserLogin(user);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Firebase Auth init note:", e);
+    }
+  },
+
+  /**
+   * Handle real Firebase Google User sign-in
+   */
+  handleFirebaseUserLogin(user) {
+    if (!user) return;
+    const name = user.displayName || (user.email ? user.email.split('@')[0] : "Google User");
+    const email = user.email || "user@gmail.com";
+    const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`;
+
+    this.currentUser = {
+      id: user.uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: name,
+      phone: user.phoneNumber || "+91 98765 43210",
+      email: email,
+      role: this.selectedRole || "citizen",
+      roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
+      ward: "Ward 2 (Talegaon Dabhade)",
+      address: "Samta Colony, Talegaon Dabhade",
+      avatar: avatar,
+      points: 1240,
+      badgesCount: 5,
+      co2SavedKg: 48,
+      segregationScore: "100%",
+      authProvider: "firebase_google"
+    };
+
+    this.saveSession();
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.closeModal();
+      CityAssist.showToast(`✓ Welcome, ${name}! Signed in via Google 🌐`);
+      if (this.selectedRole === 'driver') {
+        CityAssist.navigateTo('driver');
+      } else if (this.selectedRole === 'officer') {
+        CityAssist.navigateTo('municipality');
+      } else {
+        CityAssist.navigateTo('home');
+      }
+    }
   },
 
   loadCustomGoogleAccounts() {
@@ -144,9 +219,30 @@ const AuthEngine = {
   },
 
   /**
-   * Trigger Google Sign-In Account Chooser Modal
+   * Trigger Google Sign-In (Firebase Official Popup / Redirect)
    */
-  triggerGoogleSignIn() {
+  async triggerGoogleSignIn() {
+    if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
+      try {
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast("Opening Google Sign-In... 🌐");
+        }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('profile');
+        provider.addScope('email');
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        const result = await this.firebaseAuth.signInWithPopup(provider);
+        if (result && result.user) {
+          this.handleFirebaseUserLogin(result.user);
+          return;
+        }
+      } catch (err) {
+        console.warn("Firebase Google popup note / fallback:", err);
+        this.openGoogleAccountModal();
+        return;
+      }
+    }
     this.openGoogleAccountModal();
   },
 
