@@ -1025,18 +1025,8 @@ const UIComponents = {
             <button class="fs-route-chip" id="chip-route-4c" onclick="CityAssist.filterFullscreenRoute('4c')">🟠 Route 4C</button>
           </div>
 
-          <!-- Landmarks & Theme Bar -->
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
-            <!-- Landmarks Category Filter Bar -->
-            <div style="display:flex; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none;">
-              <span style="font-size:0.68rem; font-weight:800; color:#64748B;">Places:</span>
-              <button type="button" class="landmark-filter-chip active" data-cat="all" onclick="LeafletMapEngine.filterLandmarkCategory('all')" style="background:#0F7943; color:#FFF; border:none; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🌟 All</button>
-              <button type="button" class="landmark-filter-chip" data-cat="college" onclick="LeafletMapEngine.filterLandmarkCategory('college')" style="background:#F3E8FF; color:#7E22CE; border:1px solid #D8B4FE; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🎓 Colleges</button>
-              <button type="button" class="landmark-filter-chip" data-cat="hospital" onclick="LeafletMapEngine.filterLandmarkCategory('hospital')" style="background:#FEE2E2; color:#DC2626; border:1px solid #FECACA; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🏥 Hospitals</button>
-              <button type="button" class="landmark-filter-chip" data-cat="shop" onclick="LeafletMapEngine.filterLandmarkCategory('shop')" style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; padding:3px 7px; border-radius:8px; font-size:0.68rem; font-weight:800; cursor:pointer;">🛒 Shops</button>
-            </div>
-
-            <!-- Map Theme Selector (Google Maps, Live Traffic, Satellite, OSM) -->
+          <!-- Map Theme Bar -->
+          <div style="display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-bottom:4px;">
             <div style="display:flex; align-items:center; gap:4px;">
               <button class="map-theme-chip active" data-theme="google_streets" onclick="LeafletMapEngine.setMapTheme('google_streets')" style="padding:3px 7px; font-size:0.68rem;">🌐 Google</button>
               <button class="map-theme-chip" data-theme="google_traffic" onclick="LeafletMapEngine.setMapTheme('google_traffic')" style="padding:3px 7px; font-size:0.68rem;">🚦 Traffic</button>
