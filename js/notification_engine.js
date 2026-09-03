@@ -186,6 +186,47 @@ const NotificationEngine = {
   },
 
   /**
+   * Send Live Test Notification to Android Notification Panel
+   */
+  async testLiveNotification(type = 'arrival') {
+    await this.requestPermission();
+
+    if (type === 'arrival') {
+      await this.sendNotification({
+        title: "🚚 Garbage Van is 300m Away!",
+        body: "Truck MH-14-GH-2024 is arriving at Samta Colony in 3 mins. Keep green & blue bins ready!",
+        type: "arrival",
+        channelId: "cityassist_arrival_alerts"
+      });
+    } else if (type === 'civic') {
+      await this.sendNotification({
+        title: "✅ Civic Issue #PMC-8492 Resolved!",
+        body: "Pothole repair at Jijamata Chowk completed by Talegaon Municipal Squad. Tap to view proof.",
+        type: "civic",
+        channelId: "cityassist_civic_alerts"
+      });
+    } else if (type === 'rewards') {
+      await this.sendNotification({
+        title: "🏆 Badge Unlocked: Zero Waste Champion!",
+        body: "Congratulations Siddhant! +100 Eco-Points earned. Your IAS PMC Certificate is ready.",
+        type: "rewards",
+        channelId: "cityassist_civic_alerts"
+      });
+    } else {
+      await this.sendNotification({
+        title: "📢 Ward 2 Municipal Notice",
+        body: "Special E-Waste & Battery collection drive this Sunday at Talegaon Station Ground (9 AM - 2 PM).",
+        type: "emergency",
+        channelId: "cityassist_civic_alerts"
+      });
+    }
+
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.showToast("🔔 Notification dispatched! Pull down your phone's notification panel 📲");
+    }
+  },
+
+  /**
    * Core Universal Dispatcher (Native Android + PWA Service Worker + Web Notification)
    */
   async sendNotification(options = {}) {

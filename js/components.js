@@ -1491,9 +1491,36 @@ const UIComponents = {
           </div>
           <input type="range" min="100" max="800" step="50" value="${s.geofenceRadiusMeters || 300}" oninput="document.getElementById('radius-val-text').textContent = this.value + ' meters'; NotificationEngine.settings.geofenceRadiusMeters = parseInt(this.value); NotificationEngine.saveSettings();" style="width:100%; accent-color:#0F7943;">
         </div>
+
+        <!-- ═══════ LIVE NOTIFICATION TEST SUITE ═══════ -->
+        <div style="background:#F0FDF4; border:1.5px dashed #22C55E; padding:14px; border-radius:16px; margin-top:6px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <strong style="font-size:0.88rem; color:#15803D; display:flex; align-items:center; gap:6px;">
+              <span>📲</span> Test Notification to Mobile Panel
+            </strong>
+            <span style="font-size:0.7rem; background:#DCFCE7; color:#166534; font-weight:800; padding:2px 8px; border-radius:8px;">Live Trigger</span>
+          </div>
+          <p style="font-size:0.78rem; color:#475569; margin-bottom:12px; line-height:1.4;">
+            Tap any button below to instantly trigger a real system alert in your phone's notification bar:
+          </p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <button type="button" onclick="NotificationEngine.testLiveNotification('arrival')" style="background:#FFFFFF; border:1px solid #86EFAC; color:#166534; font-weight:800; font-size:0.78rem; padding:10px 8px; border-radius:10px; cursor:pointer; text-align:left;">
+              🚚 Truck Arrival
+            </button>
+            <button type="button" onclick="NotificationEngine.testLiveNotification('civic')" style="background:#FFFFFF; border:1px solid #86EFAC; color:#166534; font-weight:800; font-size:0.78rem; padding:10px 8px; border-radius:10px; cursor:pointer; text-align:left;">
+              ✅ Ticket Solved
+            </button>
+            <button type="button" onclick="NotificationEngine.testLiveNotification('rewards')" style="background:#FFFFFF; border:1px solid #86EFAC; color:#166534; font-weight:800; font-size:0.78rem; padding:10px 8px; border-radius:10px; cursor:pointer; text-align:left;">
+              🏆 Badge Unlocked
+            </button>
+            <button type="button" onclick="NotificationEngine.testLiveNotification('emergency')" style="background:#FFFFFF; border:1px solid #86EFAC; color:#166534; font-weight:800; font-size:0.78rem; padding:10px 8px; border-radius:10px; cursor:pointer; text-align:left;">
+              📢 Ward Notice
+            </button>
+          </div>
+        </div>
       </div>
 
-      <button type="button" class="primary-green-btn" onclick="CityAssist.closeModal(); CityAssist.showToast('Notification settings saved! ✓');" style="width:100%; padding:12px; font-weight:800;">
+      <button type="button" class="primary-green-btn" onclick="CityAssist.closeModal(); CityAssist.showToast('Notification preferences saved! ✓');" style="width:100%; padding:12px; font-weight:800;">
         Save Preferences 💾
       </button>
     `;
