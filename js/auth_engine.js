@@ -218,10 +218,27 @@ const AuthEngine = {
     }
   },
 
+  isNativeApp() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform()) ||
+           window.location.protocol === 'capacitor:' ||
+           window.location.protocol === 'file:' ||
+           navigator.userAgent.includes('wv') ||
+           (navigator.userAgent.includes('Android') && !window.chrome?.runtime);
+  },
+
   /**
-   * Trigger Google Sign-In (Firebase Official Popup / Redirect)
+   * Trigger Google Sign-In
+   * Web: Official Firebase Google Popup
+   * Android WebView: Safe In-App Account Picker & Instant Connector (prevents blank firebaseapp.com redirect)
    */
   async triggerGoogleSignIn() {
+    // 1. If running inside Android Capacitor APK / WebView, use In-App Google Account Chooser to prevent WebView popup crash
+    if (this.isNativeApp()) {
+      this.openGoogleAccountModal();
+      return;
+    }
+
+    // 2. If running on Desktop Browser / Chrome, use Firebase Popup
     if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
       try {
         if (typeof CityAssist !== 'undefined') {
@@ -238,7 +255,7 @@ const AuthEngine = {
           return;
         }
       } catch (err) {
-        console.warn("Firebase Google popup note / fallback:", err);
+        console.warn("Firebase Google popup note / fallback to modal:", err);
         this.openGoogleAccountModal();
         return;
       }
