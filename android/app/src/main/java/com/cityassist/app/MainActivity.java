@@ -1,5 +1,6 @@
 package com.cityassist.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.webkit.JavascriptInterface;
@@ -8,11 +9,19 @@ import android.webkit.WebView;
 import android.media.ToneGenerator;
 import android.media.AudioManager;
 import com.getcapacitor.BridgeActivity;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 import java.util.Locale;
 
 public class MainActivity extends BridgeActivity {
+    private static final int RC_GOOGLE_SIGN_IN = 9001;
     private TextToSpeech tts;
     private ToneGenerator toneGen;
+    private GoogleSignInClient mGoogleSignInClient;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -27,6 +36,17 @@ public class MainActivity extends BridgeActivity {
                 tts.setLanguage(Locale.US);
             }
         });
+
+        // Configure Google Sign-In options
+        try {
+            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestProfile()
+                .build();
+            mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -37,7 +57,7 @@ public class MainActivity extends BridgeActivity {
             WebSettings settings = webView.getSettings();
             settings.setMediaPlaybackRequiresUserGesture(false);
             
-            // Expose native Android TTS bridge directly to Javascript window.AndroidVoiceBridge
+            // 1. Android Voice & Chime Bridge
             webView.addJavascriptInterface(new Object() {
                 @JavascriptInterface
                 public void speak(String text, String lang) {
@@ -68,6 +88,63 @@ public class MainActivity extends BridgeActivity {
                     } catch (Exception ignored) {}
                 }
             }, "AndroidVoiceBridge");
+
+            // 2. Real Native Google Sign-In Bridge
+            webView.addJavascriptInterface(new Object() {
+                @JavascriptInterface
+                public void signIn() {
+                    runOnUiThread(() -> {
+                        try {
+                            if (mGoogleSignInClient != null) {
+                                mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
+                                    Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+                                    startActivityForResult(signInIntent, RC_GOOGLE_SIGN_IN);
+                                });
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+                }
+            }, "AndroidGoogleAuthBridge");
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == RC_GOOGLE_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null) {
+                    String name = account.getDisplayName() != null ? account.getDisplayName() : "";
+                    String email = account.getEmail() != null ? account.getEmail() : "";
+                    String photo = account.getPhotoUrl() != null ? account.getPhotoUrl().toString() : "";
+                    String id = account.getId() != null ? account.getId() : "";
+                    
+                    runOnUiThread(() -> {
+                        if (getBridge() != null && getBridge().getWebView() != null) {
+                            String js = String.format(
+                                "if (typeof AuthEngine !== 'undefined') { AuthEngine.handleNativeGoogleUserLogin('%s', '%s', '%s', '%s'); }",
+                                name.replace("'", "\\'"), email.replace("'", "\\'"), photo.replace("'", "\\'"), id.replace("'", "\\'")
+                            );
+                            getBridge().getWebView().evaluateJavascript(js, null);
+                        }
+                    });
+                }
+            } catch (ApiException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    if (getBridge() != null && getBridge().getWebView() != null) {
+                        getBridge().getWebView().evaluateJavascript(
+                            "if (typeof CityAssist !== 'undefined') { CityAssist.showToast('Google Sign-In canceled or failed'); }",
+                            null
+                        );
+                    }
+                });
+            }
         }
     }
 

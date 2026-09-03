@@ -222,23 +222,70 @@ const AuthEngine = {
     return !!(window.Capacitor && window.Capacitor.isNativePlatform()) ||
            window.location.protocol === 'capacitor:' ||
            window.location.protocol === 'file:' ||
+           typeof window.AndroidGoogleAuthBridge !== 'undefined' ||
            navigator.userAgent.includes('wv') ||
            (navigator.userAgent.includes('Android') && !window.chrome?.runtime);
   },
 
   /**
+   * Handle real Native Android Google Sign-In response
+   */
+  handleNativeGoogleUserLogin(name, email, photoUrl, uid) {
+    if (!email) return;
+    const cleanName = name || email.split('@')[0];
+    const avatar = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
+
+    this.currentUser = {
+      id: uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: cleanName,
+      phone: "+91 98765 43210",
+      email: email,
+      role: this.selectedRole || "citizen",
+      roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
+      ward: "Ward 2 (Talegaon Dabhade)",
+      address: "Samta Colony, Talegaon Dabhade",
+      avatar: avatar,
+      points: 1240,
+      badgesCount: 5,
+      co2SavedKg: 48,
+      segregationScore: "100%",
+      authProvider: "native_android_google"
+    };
+
+    this.saveSession();
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.closeModal();
+      CityAssist.showToast(`✓ Welcome, ${cleanName}! Signed in with Google 🌐`);
+      if (this.selectedRole === 'driver') {
+        CityAssist.navigateTo('driver');
+      } else if (this.selectedRole === 'officer') {
+        CityAssist.navigateTo('municipality');
+      } else {
+        CityAssist.navigateTo('home');
+      }
+    }
+  },
+
+  /**
    * Trigger Google Sign-In
-   * Web: Official Firebase Google Popup
-   * Android WebView: Safe In-App Account Picker & Instant Connector (prevents blank firebaseapp.com redirect)
+   * 1. Android APK: Real System Google Account Chooser via Native Google Play Services
+   * 2. Web / Chrome: Official Firebase Google Popup
    */
   async triggerGoogleSignIn() {
-    // 1. If running inside Android Capacitor APK / WebView, use In-App Google Account Chooser to prevent WebView popup crash
-    if (this.isNativeApp()) {
-      this.openGoogleAccountModal();
-      return;
+    // 1. Android Native Google Sign-In (Real Play Services Device Picker)
+    if (typeof window.AndroidGoogleAuthBridge !== 'undefined' && window.AndroidGoogleAuthBridge.signIn) {
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("Selecting Google Account on device... 📱");
+      }
+      try {
+        window.AndroidGoogleAuthBridge.signIn();
+        return;
+      } catch (err) {
+        console.warn("Android native Google auth error:", err);
+      }
     }
 
-    // 2. If running on Desktop Browser / Chrome, use Firebase Popup
+    // 2. Desktop Web Browser / Chrome Firebase Popup
     if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
       try {
         if (typeof CityAssist !== 'undefined') {
