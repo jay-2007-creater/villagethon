@@ -86,29 +86,37 @@
                     <label class="auth-field-label" for="auth-phone-input">Mobile Number</label>
                     <div class="auth-phone-input-row">
                       <span class="auth-country-code">🇮🇳 +91</span>
-                      <input type="tel" id="auth-phone-input" class="auth-text-input" placeholder="98765 43210" maxlength="10" value="9876543210">
+                      <input type="tel" id="auth-phone-input" class="auth-text-input" placeholder="98765 43210" maxlength="10" value="">
                     </div>
+                  </div>
+
+                  <!-- Name for Mobile User (Optional) -->
+                  <div class="auth-form-group" id="auth-phone-name-group" style="margin-top:8px;">
+                    <label class="auth-field-label" for="auth-phone-name">Full Name (Optional)</label>
+                    <input type="text" id="auth-phone-name" class="auth-text-input" placeholder="e.g. Siddhant Ramteke" value="Siddhant Ramteke">
                   </div>
 
                   <!-- OTP Digits Box (Auto revealed after send OTP) -->
                   <div id="auth-otp-verify-box" style="display:none; margin-top:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                      <label class="auth-field-label" style="margin:0;">Enter 4-Digit Verification Code</label>
-                      <span style="font-size:0.72rem; color:#15803D; font-weight:800; background:#DCFCE7; padding:2px 8px; border-radius:10px;">Demo: 4920</span>
+                      <label class="auth-field-label" style="margin:0;">Enter 6-Digit OTP</label>
+                      <span id="auth-otp-badge" style="font-size:0.72rem; color:#15803D; font-weight:800; background:#DCFCE7; padding:2px 8px; border-radius:10px;">Security Code Sent 📩</span>
                     </div>
-                    <div class="auth-otp-inputs-row">
-                      <input type="tel" id="auth-otp-1" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(1)" value="4">
-                      <input type="tel" id="auth-otp-2" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(2)" value="9">
-                      <input type="tel" id="auth-otp-3" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(3)" value="2">
-                      <input type="tel" id="auth-otp-4" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(4)" value="0">
+                    <div class="auth-otp-inputs-row" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:6px;">
+                      <input type="tel" id="auth-otp-1" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(1)" onkeydown="AuthEngine.onOtpKeyDown(event, 1)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+                      <input type="tel" id="auth-otp-2" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(2)" onkeydown="AuthEngine.onOtpKeyDown(event, 2)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+                      <input type="tel" id="auth-otp-3" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(3)" onkeydown="AuthEngine.onOtpKeyDown(event, 3)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+                      <input type="tel" id="auth-otp-4" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(4)" onkeydown="AuthEngine.onOtpKeyDown(event, 4)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+                      <input type="tel" id="auth-otp-5" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(5)" onkeydown="AuthEngine.onOtpKeyDown(event, 5)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+                      <input type="tel" id="auth-otp-6" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(6)" onkeydown="AuthEngine.onOtpKeyDown(event, 6)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748B; margin-top:6px;">
-                      <span>Didn't receive code?</span>
-                      <button type="button" onclick="AuthEngine.requestMobileOTP()" style="background:none; border:none; color:#0F7943; font-weight:800; cursor:pointer; padding:0;">Resend OTP</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:#64748B; margin-top:8px;">
+                      <span id="auth-otp-timer-label">Resend in <strong id="auth-otp-seconds">30s</strong></span>
+                      <button type="button" id="auth-otp-resend-btn" onclick="AuthEngine.requestMobileOTP()" style="background:none; border:none; color:#94A3B8; font-weight:800; cursor:not-allowed; padding:0;" disabled>Resend OTP</button>
                     </div>
                   </div>
 
-                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()">
+                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()" style="margin-top:12px;">
                     Send Verification OTP ➜
                   </button>
                 </div>

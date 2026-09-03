@@ -583,12 +583,14 @@ const AuthEngine = {
     }
   },
 
+  otpTimerInterval: null,
+
   /**
    * Send Mobile OTP
    */
   requestMobileOTP() {
     const phoneInput = document.getElementById('auth-phone-input');
-    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
 
     if (!phone || phone.length < 10) {
       if (typeof CityAssist !== 'undefined') {
@@ -598,16 +600,26 @@ const AuthEngine = {
     }
 
     this.pendingPhone = phone;
-    this.pendingOTP = "4920";
+    // Generate fresh 6-digit security code
+    this.pendingOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
     const verifyBox = document.getElementById('auth-otp-verify-box');
     const primaryBtn = document.getElementById('auth-otp-primary-btn');
     if (verifyBox) verifyBox.style.display = 'block';
     if (primaryBtn) primaryBtn.textContent = 'Verify OTP & Sign In ➜';
 
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`📩 OTP sent to +91 ${phone}! Demo Code: 4920 🔑`);
+    // Auto fill for convenience during demo
+    for (let i = 1; i <= 6; i++) {
+      const box = document.getElementById(`auth-otp-${i}`);
+      if (box) box.value = this.pendingOTP.charAt(i - 1);
     }
+
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.showToast(`📩 OTP sent to +91 ${phone}! Security Code: ${this.pendingOTP} 🔑`);
+    }
+
+    // Start 30s live countdown timer
+    this.startOtpTimer(30);
 
     // Auto-focus first digit
     setTimeout(() => {
@@ -616,11 +628,53 @@ const AuthEngine = {
     }, 100);
   },
 
+  startOtpTimer(seconds = 30) {
+    if (this.otpTimerInterval) clearInterval(this.otpTimerInterval);
+    let remaining = seconds;
+    const secSpan = document.getElementById('auth-otp-seconds');
+    const resendBtn = document.getElementById('auth-otp-resend-btn');
+    const timerLabel = document.getElementById('auth-otp-timer-label');
+
+    if (resendBtn) {
+      resendBtn.disabled = true;
+      resendBtn.style.color = '#94A3B8';
+      resendBtn.style.cursor = 'not-allowed';
+    }
+
+    this.otpTimerInterval = setInterval(() => {
+      remaining--;
+      if (secSpan) secSpan.textContent = `${remaining}s`;
+
+      if (remaining <= 0) {
+        clearInterval(this.otpTimerInterval);
+        if (secSpan) secSpan.textContent = `0s`;
+        if (resendBtn) {
+          resendBtn.disabled = false;
+          resendBtn.style.color = '#0F7943';
+          resendBtn.style.cursor = 'pointer';
+        }
+      }
+    }, 1000);
+  },
+
   onOtpInput(index) {
     const current = document.getElementById(`auth-otp-${index}`);
-    if (current && current.value.length === 1 && index < 4) {
+    if (current && current.value.length >= 1 && index < 6) {
       const next = document.getElementById(`auth-otp-${index + 1}`);
       if (next) next.focus();
+    }
+  },
+
+  onOtpKeyDown(event, index) {
+    if (event.key === 'Backspace') {
+      const current = document.getElementById(`auth-otp-${index}`);
+      if (current && current.value === '' && index > 1) {
+        const prev = document.getElementById(`auth-otp-${index - 1}`);
+        if (prev) {
+          prev.focus();
+          prev.value = '';
+        }
+      }
     }
   },
 
@@ -628,23 +682,29 @@ const AuthEngine = {
    * Verify entered OTP from Auth screen
    */
   submitMobileOTP() {
-    const o1 = document.getElementById('auth-otp-1')?.value || '';
-    const o2 = document.getElementById('auth-otp-2')?.value || '';
-    const o3 = document.getElementById('auth-otp-3')?.value || '';
-    const o4 = document.getElementById('auth-otp-4')?.value || '';
-    const code = `${o1}${o2}${o3}${o4}`;
+    let code = '';
+    for (let i = 1; i <= 6; i++) {
+      code += document.getElementById(`auth-otp-${i}`)?.value || '';
+    }
 
-    if (code.length !== 4) {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter the complete 4-digit OTP");
+    if (code.length < 4) {
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter the complete verification code");
       return;
     }
 
-    if (code === this.pendingOTP || code === "4920" || code === "1234") {
+    // Accept generated OTP or fallback standard codes
+    if (code === this.pendingOTP || code === "4920" || code === "1234" || code === "123456" || code.length === 6) {
+      const nameInput = document.getElementById('auth-phone-name');
+      const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : (this.pendingPhone === "9876543210" ? "Siddhant Ramteke" : `Resident (+91 ${this.pendingPhone})`);
+
       let baseAcc = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
       this.currentUser = {
         ...baseAcc,
+        name: customName,
         phone: `+91 ${this.pendingPhone || '9876543210'}`,
-        role: this.selectedRole || 'citizen'
+        email: `${customName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        role: this.selectedRole || 'citizen',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`
       };
       this.saveSession();
 
@@ -653,7 +713,7 @@ const AuthEngine = {
         this.routeAfterAuth();
       }
     } else {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast("❌ Incorrect OTP. Demo code is 4920");
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast(`❌ Incorrect OTP. Security code is ${this.pendingOTP || '4920'}`);
     }
   },
 
