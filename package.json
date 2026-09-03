@@ -4,6 +4,8 @@
   "description": "",
   "main": "sw.js",
   "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
     "build": "node build_www.js",
     "sync": "node build_www.js && npx cap sync android",
     "open:android": "npx cap open android"
