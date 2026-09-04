@@ -6702,15 +6702,16 @@ html, body {
 }
 
 .auth-logo-badge {
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px auto;
   background: #FFFFFF;
-  border-radius: 16px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.22);
 }
 
 .auth-brand-logo-img {
