@@ -16,7 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Leaflet CSS for Interactive Civic & Route Maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <link rel="stylesheet" href="css/style.css?v=4.0">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
 </head>
 <body class="production-app-mode">
 
@@ -1623,54 +1623,75 @@
 
               <!-- Card 1: Today's Collection Card with Live Route Map & "TRACK NOW" Button -->
               <div class="todays-collection-card">
-                <h3 class="collection-card-title">Today's Collection</h3>
+                <!-- Card Header with Live Status Tag -->
+                <div class="collection-header-row">
+                  <div class="collection-title-wrap">
+                    <h3 class="collection-card-title">Today's Collection</h3>
+                  </div>
+                  <div class="collection-live-pill">
+                    <span class="live-dot-pulse"></span>
+                    <span>LIVE DISPATCH</span>
+                  </div>
+                </div>
 
                 <div class="collection-content-row">
                   <!-- Left Details Block -->
                   <div class="collection-details-left">
-                    <h4 class="waste-category-title">Dry<br>Waste</h4>
-                    <span class="waste-time-window">10:30 AM –<br>11:00 AM</span>
+                    <div class="waste-type-hero-badge">
+                      <span class="waste-category-badge-pill">♻️ Dry Waste</span>
+                    </div>
+                    
+                    <div class="waste-time-badge">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      <span>10:30 AM – 11:00 AM</span>
+                    </div>
+
                     <div class="vehicle-proximity-tag">
-                      <span class="proximity-arrow">↓</span>
-                      <span id="home-proximity-text">Vehicle is 1.2<br>km away</span>
+                      <span class="proximity-pulse-dot"></span>
+                      <span id="home-proximity-text">Vehicle is 1.8 km away (5m)</span>
                     </div>
                   </div>
 
                   <!-- Right Mini Route Map Preview Block -->
                   <div class="collection-map-right" onclick="CityAssist.navigateTo('garbage')">
+                    <div class="mini-map-live-tag">RADAR 🛰️</div>
                     <svg viewBox="0 0 160 110" class="mini-map-preview-svg">
                       <!-- Base Street Grid -->
-                      <rect width="160" height="110" rx="14" fill="#F8FAFC"/>
+                      <rect width="160" height="110" rx="16" fill="#F1F5F9"/>
                       <path d="M-10,30 L170,90" stroke="#FFFFFF" stroke-width="12"/>
-                      <path d="M-10,30 L170,90" stroke="#E2E8F0" stroke-width="8"/>
+                      <path d="M-10,30 L170,90" stroke="#E2E8F0" stroke-width="7"/>
                       <path d="M40,-10 L20,120" stroke="#FFFFFF" stroke-width="10"/>
-                      <path d="M40,-10 L20,120" stroke="#E2E8F0" stroke-width="6"/>
+                      <path d="M40,-10 L20,120" stroke="#E2E8F0" stroke-width="5"/>
                       <path d="M120,-10 L100,120" stroke="#FFFFFF" stroke-width="10"/>
-                      <path d="M120,-10 L100,120" stroke="#E2E8F0" stroke-width="6"/>
+                      <path d="M120,-10 L100,120" stroke="#E2E8F0" stroke-width="5"/>
 
                       <!-- Green park block -->
-                      <rect x="95" y="45" width="28" height="24" rx="4" fill="#DCFCE7"/>
+                      <rect x="95" y="45" width="30" height="24" rx="6" fill="#DCFCE7"/>
 
                       <!-- Dotted Blue & Green Route Curve -->
-                      <path d="M25,85 Q70,75 115,35" stroke="#1D4ED8" stroke-width="3.5" stroke-dasharray="5,4" fill="none" stroke-linecap="round"/>
+                      <path d="M25,85 Q70,75 115,35" stroke="#2563EB" stroke-width="3.8" stroke-dasharray="5,4" fill="none" stroke-linecap="round"/>
 
                       <!-- Blue Destination Pin (User's location) -->
                       <g transform="translate(115, 30)">
-                        <path d="M0,0 C-6,-6 -6,-15 0,-21 C6,-15 6,-6 0,0 Z" fill="#1D4ED8"/>
+                        <circle cx="0" cy="-12" r="8" fill="#DBEAFE"/>
+                        <path d="M0,0 C-6,-6 -6,-15 0,-21 C6,-15 6,-6 0,0 Z" fill="#2563EB"/>
                         <circle cx="0" cy="-12" r="3.5" fill="#FFFFFF"/>
                       </g>
 
                       <!-- Moving Mini Garbage Truck Pin -->
                       <g id="home-mini-truck-marker" transform="translate(25, 78)">
                         <!-- Truck Shadow -->
-                        <ellipse cx="0" cy="10" rx="14" ry="3" fill="#000000" opacity="0.2"/>
+                        <ellipse cx="0" cy="10" rx="14" ry="3" fill="#000000" opacity="0.25"/>
                         <!-- Mini Truck Vector -->
-                        <rect x="-14" y="-4" width="18" height="12" rx="2" fill="#15803D"/>
+                        <rect x="-14" y="-4" width="18" height="12" rx="3" fill="#0F7943"/>
                         <path d="M4,-2 L10,-2 Q12,-2 13,0 L15,4 L15,8 L4,8 Z" fill="#16A34A"/>
-                        <circle cx="-5" cy="2" r="3" fill="#166534"/>
+                        <circle cx="-5" cy="2" r="3" fill="#15803D"/>
                         <path d="M-6,1 L-4,2 L-6,3" stroke="#FFFFFF" stroke-width="0.8" fill="none"/>
-                        <circle cx="-8" cy="8" r="2.5" fill="#1F2937"/>
-                        <circle cx="8" cy="8" r="2.5" fill="#1F2937"/>
+                        <circle cx="-8" cy="8" r="2.5" fill="#111827"/>
+                        <circle cx="8" cy="8" r="2.5" fill="#111827"/>
                       </g>
                     </svg>
                   </div>
@@ -1678,16 +1699,24 @@
 
                 <!-- Big Dark Green "TRACK NOW" Pill Button -->
                 <button class="track-now-cta-btn" onclick="CityAssist.navigateTo('garbage')">
-                  TRACK NOW
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                  </svg>
+                  <span>TRACK LIVE ROUTE</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
                 </button>
 
                 <!-- Arrival Tune & Voice Preview Sub-Bar -->
                 <div class="home-tune-preview-bar" onclick="AudioAnnouncerEngine.openVoicePreviewModal()">
-                  <div style="display:flex; align-items:center; gap:8px;">
+                  <div class="tune-preview-left">
                     <span class="pulse-sound-emoji">🎙️</span>
-                    <span style="font-size:0.75rem; font-weight:700; color:#15803D;">Preview Truck Arrival Tune & Voice Alert</span>
+                    <span class="tune-preview-text">Truck Arrival Chime & Voice Alert</span>
                   </div>
-                  <span style="font-size:0.75rem; font-weight:800; color:#16A34A;">Hear ➜</span>
+                  <span class="tune-listen-btn">🔊 Hear Alert ➜</span>
                 </div>
               </div>
 

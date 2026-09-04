@@ -786,8 +786,8 @@ const GPSTrackerEngine = {
     const homeMiniTruck = document.getElementById('home-mini-truck-marker');
     if (homeProximity) {
       homeProximity.innerHTML = distanceKm < 0.15
-        ? `Vehicle arrived at<br>your doorstep`
-        : `Vehicle is ${distanceFormatted}<br>away (${etaMins}m)`;
+        ? `Vehicle at your doorstep 📍`
+        : `Vehicle: ${distanceFormatted} away (${etaMins}m)`;
     }
     if (homeMiniTruck) {
       const hX = 25 + (pct / 100) * 90;
