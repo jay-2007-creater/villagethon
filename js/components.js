@@ -544,14 +544,19 @@ const UIComponents = {
         </button>
       </div>
 
-      <!-- Quick Landmark Shortcuts -->
+      <!-- Quick Landmark & Society Shortcuts -->
       <div style="margin-bottom:14px;">
-        <div style="font-size:0.75rem; font-weight:800; color:#64748B; text-transform:uppercase; margin-bottom:6px;">Quick Landmark Shortcuts:</div>
+        <div style="font-size:0.75rem; font-weight:800; color:#64748B; text-transform:uppercase; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+          <span>Quick Society & Building Landmarks:</span>
+          <span style="color:#0F7943; font-weight:700; font-size:0.7rem;">Google Maps Powered 📍</span>
+        </div>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          <button type="button" onclick="document.getElementById('addr-input-street').value='Samta Colony, Sector 2'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7285'; document.getElementById('addr-input-lng').value='73.6765';" style="background:#F0FDF4; border:1px solid #BBF7D0; color:#15803D; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🏠 Samta Colony</button>
-          <button type="button" onclick="document.getElementById('addr-input-street').value='Near MIMER Medical College, Station Road'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7305'; document.getElementById('addr-input-lng').value='73.6810';" style="background:#F3E8FF; border:1px solid #D8B4FE; color:#7E22CE; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🎓 MIMER College</button>
-          <button type="button" onclick="document.getElementById('addr-input-street').value='Station Road Bazaar, Near Rly Station'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410506'; document.getElementById('addr-input-lat').value='18.7340'; document.getElementById('addr-input-lng').value='73.6700';" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🚆 Station Bazaar</button>
-          <button type="button" onclick="document.getElementById('addr-input-street').value='Talegaon MIDC Tech Park 4'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7450'; document.getElementById('addr-input-lng').value='73.6820';" style="background:#FEF3C7; border:1px solid #FDE68A; color:#B45309; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🏭 MIDC Zone</button>
+          <button type="button" onclick="document.getElementById('addr-input-flat').value='Flat 402, Wing B'; document.getElementById('addr-input-street').value='Green Avenue Society, Samta Colony'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7285'; document.getElementById('addr-input-lng').value='73.6765';" style="background:#F0FDF4; border:1px solid #BBF7D0; color:#15803D; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🏢 Green Avenue</button>
+          <button type="button" onclick="document.getElementById('addr-input-flat').value='Row House #12'; document.getElementById('addr-input-street').value='Samta Colony, Sector 2'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7285'; document.getElementById('addr-input-lng').value='73.6765';" style="background:#F0FDF4; border:1px solid #BBF7D0; color:#15803D; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🏠 Samta Colony</button>
+          <button type="button" onclick="document.getElementById('addr-input-flat').value='Campus Staff Quarters, B-Block'; document.getElementById('addr-input-street').value='MIMER Medical College Campus, Station Road'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7305'; document.getElementById('addr-input-lng').value='73.6810';" style="background:#F3E8FF; border:1px solid #D8B4FE; color:#7E22CE; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🎓 MIMER Campus</button>
+          <button type="button" onclick="document.getElementById('addr-input-flat').value='Shop #18, Ground Floor'; document.getElementById('addr-input-street').value='Station Road Bazaar, Near Talegaon Station'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410506'; document.getElementById('addr-input-lat').value='18.7340'; document.getElementById('addr-input-lng').value='73.6700';" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🚆 Station Bazaar</button>
+          <button type="button" onclick="document.getElementById('addr-input-flat').value='Flat 204, Tower 1, Royal Meadows'; document.getElementById('addr-input-street').value='Jijamata Chowk, Bhandara Road'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7320'; document.getElementById('addr-input-lng').value='73.6740';" style="background:#FFFBEB; border:1px solid #FDE68A; color:#B45309; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🏛️ Jijamata Chowk</button>
+          <button type="button" onclick="document.getElementById('addr-input-flat').value='Building 4, Unit 102'; document.getElementById('addr-input-street').value='Talegaon MIDC Tech Park, Phase 2'; document.getElementById('addr-input-city').value='Talegaon Dabhade, Pune'; document.getElementById('addr-input-pin').value='410507'; document.getElementById('addr-input-lat').value='18.7450'; document.getElementById('addr-input-lng').value='73.6820';" style="background:#FEF3C7; border:1px solid #FDE68A; color:#B45309; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:8px; cursor:pointer;">🏭 MIDC Zone</button>
         </div>
       </div>
 
@@ -567,18 +572,18 @@ const UIComponents = {
         </div>
 
         <div>
-          <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Flat / House / Wing (Optional)</label>
-          <input type="text" id="addr-input-flat" placeholder="e.g. Flat 301, Building 4" value="" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:0.9rem;">
+          <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Building / Society / Wing / Flat</label>
+          <input type="text" id="addr-input-flat" placeholder="e.g. Flat 402, Green Avenue Society / Wing B" value="" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:0.9rem;">
         </div>
 
         <div>
-          <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Street, Locality & Ward</label>
-          <input type="text" id="addr-input-street" placeholder="e.g. Samta Colony, Station Road" value="" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:0.9rem;">
+          <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">Street, Road & Ward</label>
+          <input type="text" id="addr-input-street" placeholder="e.g. Station Road, Samta Colony, Ward 3" value="" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:0.9rem;">
         </div>
 
         <div style="display:flex; gap:10px;">
           <div style="flex:1;">
-            <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">City</label>
+            <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:4px;">City / Town</label>
             <input type="text" id="addr-input-city" placeholder="City" value="Talegaon Dabhade, Pune" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:0.9rem;">
           </div>
           <div style="flex:1;">

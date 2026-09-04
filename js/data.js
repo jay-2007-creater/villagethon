@@ -166,10 +166,10 @@ const CityData = {
   ],
 
   addresses: [
-    { id: "addr-1", label: "Home (Primary)", address: "Flat 402, Samta Colony, Talegaon Dabhade, Pune - 410507", lat: 18.7285, lng: 73.6765, isDefault: true },
-    { id: "addr-2", label: "Office (MIDC)", address: "Tech Park 4, Talegaon MIDC, Pune - 410507", lat: 18.7450, lng: 73.6820, isDefault: false },
-    { id: "addr-3", label: "Parents' House", address: "Plot 18, Somatane Phata, Talegaon, Pune - 410506", lat: 18.7180, lng: 73.6920, isDefault: false },
-    { id: "addr-4", label: "Station Bazaar", address: "Shop 12, Station Road Bazaar, Talegaon - 410506", lat: 18.7340, lng: 73.6700, isDefault: false }
+    { id: "addr-1", label: "Home (Primary)", flat: "Flat 402, Wing B", street: "Green Avenue Society, Samta Colony", city: "Talegaon Dabhade, Pune", pin: "410507", address: "Flat 402, Wing B, Green Avenue Society, Samta Colony, Talegaon Dabhade, Pune - 410507", lat: 18.7288, lng: 73.6768, isDefault: true },
+    { id: "addr-2", label: "Office (MIDC)", flat: "Unit 204, Tower A", street: "Talegaon MIDC Tech Park, Phase 2", city: "Talegaon Dabhade, Pune", pin: "410507", address: "Unit 204, Tower A, Talegaon MIDC Tech Park, Phase 2, Pune - 410507", lat: 18.7450, lng: 73.6820, isDefault: false },
+    { id: "addr-3", label: "Parents' House", flat: "Row House #18", street: "Somatane Phata, Bhandara Road", city: "Talegaon Dabhade, Pune", pin: "410506", address: "Row House #18, Somatane Phata, Bhandara Road, Talegaon - 410506", lat: 18.7180, lng: 73.6920, isDefault: false },
+    { id: "addr-4", label: "Station Bazaar", flat: "Shop #12, Ground Floor", street: "Station Road Bazaar, Near Talegaon Station", city: "Talegaon Dabhade, Pune", pin: "410506", address: "Shop #12, Station Road Bazaar, Near Talegaon Station - 410506", lat: 18.7340, lng: 73.6700, isDefault: false }
   ],
 
   notifications: [

@@ -209,6 +209,160 @@ const GoogleMapsEngine = {
       this.citizenMap.panTo(this.citizenHomeMarker.getPosition());
       this.citizenMap.setZoom(16);
     }
+  },
+
+  /**
+   * Reverse geocodes coordinates (lat, lng) using Google Maps Geocoder API
+   * Extracts exact building names, premises, streets, wards, city, and pincode.
+   */
+  async reverseGeocode(lat, lng) {
+    if (!window.google || !google.maps || !google.maps.Geocoder) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: { lat: Number(lat), lng: Number(lng) } }, (results, status) => {
+        if (status !== "OK" || !results || results.length === 0) {
+          resolve(null);
+          return;
+        }
+
+        const best = results[0];
+        let building = "";
+        let streetNumber = "";
+        let route = "";
+        let sublocality = "";
+        let locality = "";
+        let pin = "";
+
+        // Parse address components
+        best.address_components.forEach((comp) => {
+          const types = comp.types || [];
+          if (types.includes("premise") || types.includes("subpremise") || types.includes("point_of_interest") || types.includes("establishment")) {
+            if (!building) building = comp.long_name;
+          }
+          if (types.includes("street_number")) {
+            streetNumber = comp.long_name;
+          }
+          if (types.includes("route")) {
+            route = comp.long_name;
+          }
+          if (types.includes("sublocality_level_1") || types.includes("sublocality_level_2") || types.includes("neighborhood")) {
+            if (!sublocality) sublocality = comp.long_name;
+          }
+          if (types.includes("locality") || types.includes("administrative_area_level_2")) {
+            if (!locality) locality = comp.long_name;
+          }
+          if (types.includes("postal_code")) {
+            pin = comp.long_name;
+          }
+        });
+
+        // Format building / flat
+        let flatVal = "";
+        if (building) {
+          flatVal = streetNumber ? `${building}, #${streetNumber}` : building;
+        } else if (streetNumber) {
+          flatVal = `House #${streetNumber}`;
+        }
+
+        // Format street & locality
+        let streetVal = [route, sublocality].filter(Boolean).join(", ");
+        if (!streetVal && best.formatted_address) {
+          const parts = best.formatted_address.split(",");
+          streetVal = parts.slice(0, 2).join(",").trim();
+        }
+
+        let cityVal = locality ? `${locality}, Pune` : "Talegaon Dabhade, Pune";
+        let pinVal = pin || "410507";
+
+        resolve({
+          source: "google_maps",
+          formattedAddress: best.formatted_address,
+          flat: flatVal,
+          street: streetVal,
+          city: cityVal,
+          pin: pinVal,
+          lat: best.geometry ? best.geometry.location.lat() : lat,
+          lng: best.geometry ? best.geometry.location.lng() : lng
+        });
+      });
+    });
+  },
+
+  /**
+   * Attaches Google Places Autocomplete to an HTML input element
+   */
+  attachPlacesAutocomplete(inputEl, callback) {
+    if (!inputEl || !window.google || !google.maps || !google.maps.places) return null;
+
+    try {
+      const autocomplete = new google.maps.places.Autocomplete(inputEl, {
+        componentRestrictions: { country: "in" },
+        fields: ["address_components", "geometry", "formatted_address", "name"]
+      });
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place || !place.geometry) return;
+
+        let building = place.name || "";
+        let streetNumber = "";
+        let route = "";
+        let sublocality = "";
+        let locality = "";
+        let pin = "";
+
+        if (place.address_components) {
+          place.address_components.forEach((comp) => {
+            const types = comp.types || [];
+            if (types.includes("premise") || types.includes("subpremise") || types.includes("point_of_interest") || types.includes("establishment")) {
+              if (!building) building = comp.long_name;
+            }
+            if (types.includes("street_number")) {
+              streetNumber = comp.long_name;
+            }
+            if (types.includes("route")) {
+              route = comp.long_name;
+            }
+            if (types.includes("sublocality_level_1") || types.includes("sublocality_level_2") || types.includes("neighborhood")) {
+              if (!sublocality) sublocality = comp.long_name;
+            }
+            if (types.includes("locality") || types.includes("administrative_area_level_2")) {
+              if (!locality) locality = comp.long_name;
+            }
+            if (types.includes("postal_code")) {
+              pin = comp.long_name;
+            }
+          });
+        }
+
+        const flatVal = building ? (streetNumber ? `${building}, #${streetNumber}` : building) : (streetNumber ? `House #${streetNumber}` : "");
+        const streetVal = [route, sublocality].filter(Boolean).join(", ") || place.name || "";
+        const cityVal = locality ? `${locality}, Pune` : "Talegaon Dabhade, Pune";
+        const pinVal = pin || "410507";
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        if (typeof callback === "function") {
+          callback({
+            building: flatVal,
+            street: streetVal,
+            city: cityVal,
+            pin: pinVal,
+            lat,
+            lng,
+            formatted: place.formatted_address
+          });
+        }
+      });
+
+      return autocomplete;
+    } catch (e) {
+      console.warn("Could not attach Google Places Autocomplete:", e);
+      return null;
+    }
   }
 };
 
