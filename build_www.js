@@ -22,7 +22,7 @@ function copyRecursive(src, dest) {
 }
 
 // Copy essential web assets
-['index.html', 'manifest.json', 'sw.js', 'css', 'js', 'audio'].forEach(item => {
+['index.html', 'manifest.json', 'sw.js', 'favicon.png', 'assets', 'css', 'js', 'audio'].forEach(item => {
   const src = path.join(__dirname, item);
   const dest = path.join(wwwDir, item);
   if (fs.existsSync(src)) {
