@@ -1225,6 +1225,9 @@ html, body {
 .green-pin { background: #DCFCE7; }
 .yellow-road { background: #FEF3C7; }
 .purple-dots { background: #F3E8FF; }
+.orange-pothole { background: #FFEDD5; }
+.amber-light { background: #FEF3C7; }
+.cyan-water { background: #E0F2FE; }
 
 .tile-icon-box svg {
   width: 24px;

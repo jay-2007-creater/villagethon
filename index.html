@@ -1151,9 +1151,45 @@
             <div class="screen-content report-page-content">
               <h2 class="section-headline">What issue do you want to report?</h2>
 
-              <!-- 6 Issue Category Tiles -->
+              <!-- 9 Issue Category Tiles (Including Potholes & Infra) -->
               <div class="issue-categories-grid">
-                <div class="issue-type-tile selected" data-issue="Illegal Dumping" onclick="CityAssist.selectIssueType(this, 'Illegal Dumping')">
+                <div class="issue-type-tile selected" data-issue="Potholes / Bad Road" onclick="CityAssist.selectIssueType(this, 'Potholes / Bad Road')">
+                  <div class="tile-icon-box orange-pothole">
+                    <svg viewBox="0 0 24 24" fill="#EA580C">
+                      <path d="M4 19h16v2H4v-2zm2-4h3l2-6h2l2 6h3l-2-7a2 2 0 0 0-2-1.5h-4a2 2 0 0 0-2 1.5L6 15z"/>
+                    </svg>
+                  </div>
+                  <span class="tile-title">Potholes /<br>Bad Road</span>
+                </div>
+
+                <div class="issue-type-tile" data-issue="Overflowing Bin" onclick="CityAssist.selectIssueType(this, 'Overflowing Bin')">
+                  <div class="tile-icon-box blue-bin">
+                    <svg viewBox="0 0 24 24" fill="#2563EB">
+                      <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zm-13 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8H6z"/>
+                    </svg>
+                  </div>
+                  <span class="tile-title">Overflowing<br>Bin</span>
+                </div>
+
+                <div class="issue-type-tile" data-issue="Broken Streetlight" onclick="CityAssist.selectIssueType(this, 'Broken Streetlight')">
+                  <div class="tile-icon-box amber-light">
+                    <svg viewBox="0 0 24 24" fill="#D97706">
+                      <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm-2 18h4v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1z"/>
+                    </svg>
+                  </div>
+                  <span class="tile-title">Broken<br>Streetlight</span>
+                </div>
+
+                <div class="issue-type-tile" data-issue="Water Leakage" onclick="CityAssist.selectIssueType(this, 'Water Leakage')">
+                  <div class="tile-icon-box cyan-water">
+                    <svg viewBox="0 0 24 24" fill="#0284C7">
+                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                    </svg>
+                  </div>
+                  <span class="tile-title">Water<br>Leakage</span>
+                </div>
+
+                <div class="issue-type-tile" data-issue="Illegal Dumping" onclick="CityAssist.selectIssueType(this, 'Illegal Dumping')">
                   <div class="tile-icon-box dark-blue-bin">
                     <svg viewBox="0 0 24 24" fill="#1E3A8A">
                       <path d="M3 6h18v2H3V6zm2 3h14v13H5V9zm3-7h8v2H8V2z"/>
@@ -1171,24 +1207,6 @@
                   <span class="tile-title">Missed<br>Pickup</span>
                 </div>
 
-                <div class="issue-type-tile" data-issue="Overflowing Bin" onclick="CityAssist.selectIssueType(this, 'Overflowing Bin')">
-                  <div class="tile-icon-box blue-bin">
-                    <svg viewBox="0 0 24 24" fill="#2563EB">
-                      <path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zm-13 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8H6z"/>
-                    </svg>
-                  </div>
-                  <span class="tile-title">Overflowing<br>Bin</span>
-                </div>
-
-                <div class="issue-type-tile" data-issue="Dirty Area" onclick="CityAssist.selectIssueType(this, 'Dirty Area')">
-                  <div class="tile-icon-box green-pin">
-                    <svg viewBox="0 0 24 24" fill="#16A34A">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
-                    </svg>
-                  </div>
-                  <span class="tile-title">Dirty Area</span>
-                </div>
-
                 <div class="issue-type-tile" data-issue="Road Littering" onclick="CityAssist.selectIssueType(this, 'Road Littering')">
                   <div class="tile-icon-box yellow-road">
                     <svg viewBox="0 0 24 24" fill="#D97706">
@@ -1197,6 +1215,15 @@
                     </svg>
                   </div>
                   <span class="tile-title">Road<br>Littering</span>
+                </div>
+
+                <div class="issue-type-tile" data-issue="Dirty Area" onclick="CityAssist.selectIssueType(this, 'Dirty Area')">
+                  <div class="tile-icon-box green-pin">
+                    <svg viewBox="0 0 24 24" fill="#16A34A">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                    </svg>
+                  </div>
+                  <span class="tile-title">Dirty<br>Area</span>
                 </div>
 
                 <div class="issue-type-tile" data-issue="Other Issue" onclick="CityAssist.selectIssueType(this, 'Other Issue')">
@@ -1244,7 +1271,7 @@
               <div class="form-section-block">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                   <label class="form-section-label" style="margin-bottom:0;">Add Photos</label>
-                  <span style="font-size:0.72rem; color:#10B981; font-weight:800;">✨ AI Vision Scanner Active</span>
+                  <span style="font-size:0.72rem; color:#10B981; font-weight:800;">✨ Gemini AI Vision Active</span>
                 </div>
 
                 <div class="photo-upload-zone" id="photo-dropzone" onclick="document.getElementById('issue-photo-input').click()">
@@ -1262,14 +1289,17 @@
                 <!-- Quick AI Test Presets -->
                 <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
                   <span style="font-size:0.72rem; color:#64748B; font-weight:700; align-self:center;">⚡ Try Sample:</span>
+                  <button type="button" onclick="CityAssist.loadSampleIssuePhoto('road_pothole')" style="background:#FFF7ED; border:1px solid #FFEDD5; color:#EA580C; padding:3px 8px; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">
+                    🛣️ Bad Road / Pothole
+                  </button>
                   <button type="button" onclick="CityAssist.loadSampleIssuePhoto('overflowing_bin')" style="background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; padding:3px 8px; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">
                     🗑️ Overflowing Bin
                   </button>
-                  <button type="button" onclick="CityAssist.loadSampleIssuePhoto('road_litter')" style="background:#FFFBEB; border:1px solid #FDE68A; color:#D97706; padding:3px 8px; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">
-                    🕳️ Road Littering
+                  <button type="button" onclick="CityAssist.loadSampleIssuePhoto('broken_streetlight')" style="background:#FFFBEB; border:1px solid #FDE68A; color:#D97706; padding:3px 8px; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">
+                    💡 Broken Light
                   </button>
-                  <button type="button" onclick="CityAssist.loadSampleIssuePhoto('dirty_area')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#2563EB; padding:3px 8px; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">
-                    🧹 Dirty Area
+                  <button type="button" onclick="CityAssist.loadSampleIssuePhoto('water_leak')" style="background:#F0F9FF; border:1px solid #BAE6FD; color:#0284C7; padding:3px 8px; border-radius:8px; font-size:0.72rem; font-weight:700; cursor:pointer;">
+                    💧 Water Leak
                   </button>
                 </div>
 
