@@ -4,13 +4,13 @@
 
 const CityData = {
   user: {
-    name: "Siddhant Ramteke",
-    phone: "+91 98765 43210",
-    email: "siddhant@gmail.com",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=240&auto=format&fit=crop&q=80",
-    points: 1240,
-    badgesCount: 4,
-    location: "Samta Colony, Talegaon"
+    name: "Citizen",
+    phone: "",
+    email: "",
+    avatar: "https://ui-avatars.com/api/?name=Citizen&background=0F7943&color=fff&size=200&bold=true",
+    points: 0,
+    badgesCount: 0,
+    location: "Talegaon Dabhade"
   },
 
   requests: [

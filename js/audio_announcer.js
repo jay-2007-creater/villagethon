@@ -584,7 +584,7 @@ const AudioAnnouncerEngine = {
             <div class="studio-badge-icon">🎙️</div>
             <div>
               <h3 style="font-size:1.15rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Waste Truck Arrival Audio Studio</h3>
-              <p style="font-size:0.78rem; color:#64748B;">Preview & download municipal tunes and voice alerts</p>
+              <p style="font-size:0.78rem; color:#64748B;">Preview municipal tunes and voice alerts</p>
             </div>
           </div>
         </div>
@@ -610,7 +610,7 @@ const AudioAnnouncerEngine = {
           <label style="font-size:0.8rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
             1. Select Arrival Tune Chime
           </label>
-          <div class="tune-options-grid">
+          <div class="tune-options-grid" style="grid-template-columns: 1fr 1fr;">
             <!-- 1. Swachh Bharat -->
             <div class="tune-option-card ${this.selectedTune === 'swachh_bharat' ? 'selected' : ''}" id="tune-card-swachh_bharat" onclick="AudioAnnouncerEngine.selectTune('swachh_bharat')">
               <div class="tune-card-icon">🎵</div>
@@ -624,13 +624,6 @@ const AudioAnnouncerEngine = {
               <div class="tune-card-title">Doorstep Bell</div>
               <div class="tune-card-desc">2-Tone Ding-Dong</div>
             </div>
-
-            <!-- 3. Eco Horn -->
-            <div class="tune-option-card ${this.selectedTune === 'eco_horn' ? 'selected' : ''}" id="tune-card-eco_horn" onclick="AudioAnnouncerEngine.selectTune('eco_horn')">
-              <div class="tune-card-icon">🎺</div>
-              <div class="tune-card-title">Eco Horn</div>
-              <div class="tune-card-desc">Tri-Tone Blast</div>
-            </div>
           </div>
         </div>
 
@@ -641,13 +634,13 @@ const AudioAnnouncerEngine = {
           </label>
           <div class="lang-pills-row">
             <button type="button" class="lang-option-pill ${this.selectedLang === 'en' ? 'selected' : ''}" id="lang-pill-en" onclick="AudioAnnouncerEngine.selectLanguage('en')">
-              🇬🇧 English (Municipal)
+              English (Municipal)
             </button>
             <button type="button" class="lang-option-pill ${this.selectedLang === 'hi' ? 'selected' : ''}" id="lang-pill-hi" onclick="AudioAnnouncerEngine.selectLanguage('hi')">
-              🇮🇳 Hindi (गाड़ीवाला आया)
+              Hindi (गाड़ीवाला आया)
             </button>
             <button type="button" class="lang-option-pill ${this.selectedLang === 'mr' ? 'selected' : ''}" id="lang-pill-mr" onclick="AudioAnnouncerEngine.selectLanguage('mr')">
-              🚩 Marathi (कचरा गाडी)
+              Marathi (कचरा गाडी)
             </button>
           </div>
         </div>
@@ -664,7 +657,7 @@ const AudioAnnouncerEngine = {
         </div>
 
         <!-- Control Action Buttons -->
-        <div class="studio-actions-row">
+        <div class="studio-actions-row" style="margin-bottom:12px;">
           <button type="button" class="btn-studio-play-full" id="btn-preview-play-toggle" onclick="AudioAnnouncerEngine.playFullPreview()">
             <span style="font-size:1.1rem;">▶</span> Play Full Preview
           </button>
@@ -673,16 +666,6 @@ const AudioAnnouncerEngine = {
           </button>
           <button type="button" class="btn-studio-voice-only" onclick="AudioAnnouncerEngine.playVoiceAnnouncementOnly()" title="Play Spoken Voice Announcement Only">
             🗣️ Voice Only
-          </button>
-        </div>
-
-        <!-- Direct Download & Ringtone Guide Buttons -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
-          <button type="button" onclick="AudioAnnouncerEngine.downloadAudioAlert()" style="background:#EFF6FF; color:#1D4ED8; border:1.5px solid #BFDBFE; border-radius:12px; padding:10px 8px; font-size:0.78rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <span>⬇️</span> Download Alert (.MP3)
-          </button>
-          <button type="button" onclick="AudioAnnouncerEngine.showRingtoneGuideModal()" style="background:#FEF3C7; color:#B45309; border:1.5px solid #FDE68A; border-radius:12px; padding:10px 8px; font-size:0.78rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <span>📲</span> Set as Ringtone
           </button>
         </div>
 

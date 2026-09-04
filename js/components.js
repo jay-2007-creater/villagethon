@@ -205,6 +205,10 @@ const UIComponents = {
   },
 
   renderRewardsModal() {
+    const pts = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.points !== undefined) 
+      ? AuthEngine.currentUser.points 
+      : 0;
+
     return `
       <div class="modal-header-block">
         <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:4px;">🌟 My Points & Rewards</h3>
@@ -213,8 +217,10 @@ const UIComponents = {
 
       <div style="background:linear-gradient(135deg, #0F7943, #16A34A); border-radius:16px; padding:20px; color:#fff; text-align:center; margin-bottom:16px; box-shadow:0 8px 20px rgba(15, 121, 67, 0.25);">
         <div style="font-size:0.85rem; opacity:0.9;">Available Balance</div>
-        <div style="font-size:2.4rem; font-weight:800; margin:4px 0;">1,240 pts</div>
-        <div style="font-size:0.8rem; background:rgba(255,255,255,0.2); display:inline-block; padding:4px 12px; border-radius:20px;">Redeemable for ₹124 discount on utility bills</div>
+        <div style="font-size:2.4rem; font-weight:800; margin:4px 0;">${pts.toLocaleString()} pts</div>
+        <div style="font-size:0.8rem; background:rgba(255,255,255,0.2); display:inline-block; padding:4px 12px; border-radius:20px;">
+          ${pts > 0 ? `Redeemable for ₹${Math.floor(pts / 10)} discount on municipal services` : `Earn your first 50 pts on your next waste pickup!`}
+        </div>
       </div>
 
       <!-- Social Shareable Civic Eco-Card CTA -->
@@ -230,7 +236,7 @@ const UIComponents = {
             <div style="font-weight:700; font-size:0.95rem;">₹50 Municipal Tax Voucher</div>
             <div style="font-size:0.8rem; color:#64748B;">Requires 500 points</div>
           </div>
-          <button onclick="CityAssist.showToast('Voucher redeemed successfully!'); CityAssist.closeModal();" style="background:#0F7943; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:700; cursor:pointer;">Redeem</button>
+          <button onclick="${pts >= 500 ? "CityAssist.showToast('Voucher redeemed successfully!'); CityAssist.closeModal();" : "CityAssist.showToast('⚠️ You need 500 points to redeem this voucher');"}" style="background:${pts >= 500 ? '#0F7943' : '#94A3B8'}; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:700; cursor:pointer;">Redeem</button>
         </div>
       </div>
 
@@ -239,6 +245,15 @@ const UIComponents = {
   },
 
   renderCivicEcoCardModal() {
+    const u = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser) 
+      ? AuthEngine.currentUser 
+      : { name: "Citizen", points: 0, co2SavedKg: 0, segregationScore: "0%", ward: "Ward 2 (Talegaon Dabhade)" };
+
+    const pts = u.points !== undefined ? u.points : 0;
+    const co2 = u.co2SavedKg !== undefined ? u.co2SavedKg : 0;
+    const score = u.segregationScore || (pts > 0 ? "100%" : "0%");
+    const avatar = u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'Citizen')}&background=0F7943&color=fff&size=200&bold=true`;
+
     return `
       <div style="text-align:center; padding:6px 0 14px;">
         <!-- Holographic Civic Eco-Card Certificate -->
@@ -248,11 +263,11 @@ const UIComponents = {
           <div class="civic-card-header">
             <div style="display:flex; align-items:center; gap:10px;">
               <div style="width:48px; height:48px; border-radius:50%; border:2px solid #FDE047; overflow:hidden; background:#FFF; box-shadow:0 4px 10px rgba(0,0,0,0.3);">
-                <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=240&auto=format&fit=crop&q=80" style="width:100%; height:100%; object-fit:cover;">
+                <img src="${avatar}" style="width:100%; height:100%; object-fit:cover;">
               </div>
               <div style="text-align:left;">
-                <div style="font-size:1.1rem; font-weight:900; color:#FFFFFF; line-height:1.2;">Siddhant Ramteke</div>
-                <div style="font-size:0.75rem; color:#A7F3D0; font-weight:700;">🌟 Gold Tier Civic Champion</div>
+                <div style="font-size:1.1rem; font-weight:900; color:#FFFFFF; line-height:1.2;">${u.name || 'Citizen'}</div>
+                <div style="font-size:0.75rem; color:#A7F3D0; font-weight:700;">🌟 ${pts >= 1000 ? 'Gold Tier Civic Champion' : 'Green Citizen Member'}</div>
               </div>
             </div>
             <div class="civic-seal-badge">
@@ -264,15 +279,15 @@ const UIComponents = {
           <!-- Stats Grid -->
           <div class="civic-stats-grid">
             <div>
-              <div class="civic-stat-val">1,240</div>
+              <div class="civic-stat-val">${pts.toLocaleString()}</div>
               <div class="civic-stat-lbl">Green Pts</div>
             </div>
             <div>
-              <div class="civic-stat-val">48 kg</div>
+              <div class="civic-stat-val">${co2} kg</div>
               <div class="civic-stat-lbl">CO₂ Offset</div>
             </div>
             <div>
-              <div class="civic-stat-val">100%</div>
+              <div class="civic-stat-val">${score}</div>
               <div class="civic-stat-lbl">Segregation</div>
             </div>
           </div>
@@ -280,7 +295,7 @@ const UIComponents = {
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; border-top:1px solid rgba(255,255,255,0.18); padding-top:12px; font-size:0.72rem;">
             <div style="text-align:left; color:#A7F3D0;">
               <div>Verified by CityAssist Realtime</div>
-              <strong style="color:#FFF;">Certificate ID: TMC-2026-8849</strong>
+              <strong style="color:#FFF;">Certificate ID: TMC-2026-${Math.floor(1000 + Math.random() * 9000)}</strong>
             </div>
             <div style="background:#FFF; color:#0F172A; font-weight:900; padding:4px 8px; border-radius:6px; font-size:0.68rem;">
               QR VERIFIED ✓
@@ -295,12 +310,12 @@ const UIComponents = {
 
         <!-- Share Actions -->
         <div style="display:flex; flex-direction:column; gap:10px;">
-          <button type="button" onclick="window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent('🌱 I earned 1,240 Green Points and achieved Gold Civic Champion status in Talegaon with CityAssist! Join me in making our city cleaner: https://cityassist.app'), '_blank'); CityAssist.showToast('📲 WhatsApp sharing opened!');" style="background:#25D366; color:#FFF; border:none; padding:14px; border-radius:14px; font-weight:800; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; box-shadow:0 6px 18px rgba(37,211,102,0.35);">
+          <button type="button" onclick="window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent('🌱 I earned ${pts} Green Points on CityAssist in Talegaon! Join me in making our city cleaner: https://cityassist.app'), '_blank'); CityAssist.showToast('📲 WhatsApp sharing opened!');" style="background:#25D366; color:#FFF; border:none; padding:14px; border-radius:14px; font-weight:800; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; box-shadow:0 6px 18px rgba(37,211,102,0.35);">
             <span>📲 Share on WhatsApp</span>
           </button>
 
           <div style="display:flex; gap:10px;">
-            <button type="button" onclick="navigator.clipboard.writeText('🌱 I earned 1,240 Green Points and achieved Gold Civic Champion status in Talegaon with CityAssist! Check out my certificate: TMC-2026-8849'); CityAssist.showToast('📋 Score summary copied to clipboard!');" style="flex:1; background:#F1F5F9; color:#334155; border:1px solid #CBD5E1; padding:12px; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
+            <button type="button" onclick="navigator.clipboard.writeText('🌱 I earned ${pts} Green Points on CityAssist in Talegaon!'); CityAssist.showToast('📋 Score summary copied to clipboard!');" style="flex:1; background:#F1F5F9; color:#334155; border:1px solid #CBD5E1; padding:12px; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
               📋 Copy Link
             </button>
             <button type="button" onclick="CityAssist.showToast('📥 Certificate saved to photos!'); CityAssist.closeModal();" style="flex:1; background:#F8FAFC; color:#0F172A; border:1px solid #CBD5E1; padding:12px; border-radius:12px; font-weight:800; font-size:0.85rem; cursor:pointer;">
@@ -313,39 +328,68 @@ const UIComponents = {
   },
 
   renderBadgesModal() {
+    const pts = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.points !== undefined) 
+      ? AuthEngine.currentUser.points 
+      : 0;
+    const badgesCount = (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.badgesCount !== undefined) 
+      ? AuthEngine.currentUser.badgesCount 
+      : 0;
+
     return `
       <div class="modal-header-block">
-        <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:4px;">🏅 My Civic Badges (5)</h3>
+        <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:4px;">🏅 My Civic Badges (${badgesCount})</h3>
         <p style="color:#64748B; font-size:0.88rem; margin-bottom:14px;">Milestones unlocked in your municipal partnership.</p>
       </div>
 
-      <!-- 1,000 Points Milestone Gold Banner -->
-      <div class="gold-milestone-banner" onclick="CityAssist.showCertificateModal()">
-        <div style="font-size:2.4rem; animation:tada 2s infinite;">🏆</div>
-        <div style="flex:1;">
-          <div style="font-size:0.75rem; font-weight:800; color:#B45309; text-transform:uppercase; letter-spacing:0.5px;">★ 1,000 Points Milestone Reached! ★</div>
-          <div style="font-size:1.05rem; font-weight:800; color:#92400E; margin:2px 0;">Gold Eco Champion Badge</div>
-          <div style="font-size:0.8rem; color:#B45309;">Official PMC Civic Certificate Unlocked</div>
+      ${pts >= 1000 ? `
+        <!-- 1,000 Points Milestone Gold Banner -->
+        <div class="gold-milestone-banner" onclick="CityAssist.showCertificateModal()">
+          <div style="font-size:2.4rem; animation:tada 2s infinite;">🏆</div>
+          <div style="flex:1;">
+            <div style="font-size:0.75rem; font-weight:800; color:#B45309; text-transform:uppercase; letter-spacing:0.5px;">★ 1,000 Points Milestone Reached! ★</div>
+            <div style="font-size:1.05rem; font-weight:800; color:#92400E; margin:2px 0;">Gold Eco Champion Badge</div>
+            <div style="font-size:0.8rem; color:#B45309;">Official PMC Civic Certificate Unlocked</div>
+          </div>
+          <button class="view-cert-link-btn">View ➜</button>
         </div>
-        <button class="view-cert-link-btn">View ➜</button>
-      </div>
+      ` : `
+        <!-- Next Milestone Progress Banner -->
+        <div style="background:#F0FDF4; border:1.5px solid #BBF7D0; border-radius:14px; padding:14px; display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+          <div style="font-size:2rem;">🌱</div>
+          <div style="flex:1;">
+            <div style="font-size:0.75rem; font-weight:800; color:#15803D; text-transform:uppercase; letter-spacing:0.5px;">Next Milestone: 1,000 Points</div>
+            <div style="font-size:0.95rem; font-weight:800; color:#14532D; margin:2px 0;">Gold Eco Champion Badge</div>
+            <div style="font-size:0.75rem; color:#15803D;">Current Progress: ${pts} / 1,000 pts</div>
+            <div style="width:100%; height:6px; background:#DCFCE7; border-radius:4px; margin-top:6px; overflow:hidden;">
+              <div style="width:${Math.min(100, Math.round((pts / 1000) * 100))}%; height:100%; background:#22C55E; border-radius:4px;"></div>
+            </div>
+          </div>
+        </div>
+      `}
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
-        ${CityData.badges.map(b => `
-          <div style="background:${b.isMilestone1000 ? 'linear-gradient(135deg, #FEF3C7, #FDE68A)' : '#F8FAFC'}; border:${b.isMilestone1000 ? '1.5px solid #F59E0B' : '1px solid #E2E8F0'}; border-radius:14px; padding:12px; text-align:center; position:relative;">
-            ${b.isMilestone1000 ? `<span style="position:absolute; top:6px; right:6px; background:#F59E0B; color:#000; font-size:0.65rem; font-weight:800; padding:1px 6px; border-radius:10px;">1,000 PTS</span>` : ''}
-            <div style="font-size:2rem; margin-bottom:4px;">${b.icon}</div>
-            <div style="font-weight:700; font-size:0.92rem; margin-bottom:2px; color:#111827;">${b.title}</div>
-            <div style="font-size:0.75rem; color:${b.isMilestone1000 ? '#92400E' : '#64748B'}; line-height:1.25;">${b.desc}</div>
-          </div>
-        `).join('')}
+        ${CityData.badges.map(b => {
+          const isUnlocked = badgesCount > 0 && (b.isMilestone1000 ? pts >= 1000 : true);
+          return `
+            <div style="background:${isUnlocked ? (b.isMilestone1000 ? 'linear-gradient(135deg, #FEF3C7, #FDE68A)' : '#F8FAFC') : '#F1F5F9'}; border:${isUnlocked ? (b.isMilestone1000 ? '1.5px solid #F59E0B' : '1px solid #E2E8F0') : '1px dashed #CBD5E1'}; border-radius:14px; padding:12px; text-align:center; position:relative; opacity:${isUnlocked ? '1' : '0.65'};">
+              ${b.isMilestone1000 && isUnlocked ? `<span style="position:absolute; top:6px; right:6px; background:#F59E0B; color:#000; font-size:0.65rem; font-weight:800; padding:1px 6px; border-radius:10px;">1,000 PTS</span>` : ''}
+              <div style="font-size:2rem; margin-bottom:4px; filter:${isUnlocked ? 'none' : 'grayscale(100%)'};">${b.icon}</div>
+              <div style="font-weight:700; font-size:0.92rem; margin-bottom:2px; color:#111827;">${b.title}</div>
+              <div style="font-size:0.75rem; color:${isUnlocked && b.isMilestone1000 ? '#92400E' : '#64748B'}; line-height:1.25;">
+                ${isUnlocked ? b.desc : '🔒 Complete handovers to unlock'}
+              </div>
+            </div>
+          `;
+        }).join('')}
       </div>
 
       <div style="display:flex; gap:10px;">
-        <button class="primary-green-btn" onclick="CityAssist.showCertificateModal()" style="flex:1;">
-          📜 Download 1,000 Pts Certificate
-        </button>
-        <button onclick="CityAssist.closeModal()" style="background:#F1F5F9; color:#475569; border:none; padding:12px 16px; border-radius:10px; font-weight:700; cursor:pointer;">Close</button>
+        ${pts >= 1000 ? `
+          <button class="primary-green-btn" onclick="CityAssist.showCertificateModal()" style="flex:1;">
+            📜 Download 1,000 Pts Certificate
+          </button>
+        ` : ''}
+        <button onclick="CityAssist.closeModal()" style="background:#F1F5F9; color:#475569; border:none; padding:12px 16px; border-radius:10px; font-weight:700; cursor:pointer; width:100%;">Close</button>
       </div>
     `;
   },

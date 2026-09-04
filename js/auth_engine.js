@@ -148,17 +148,17 @@ const AuthEngine = {
     this.currentUser = {
       id: user.uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
       name: name,
-      phone: user.phoneNumber || "+91 98765 43210",
+      phone: user.phoneNumber || "",
       email: email,
       role: this.selectedRole || "citizen",
       roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
       ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Samta Colony, Talegaon Dabhade",
+      address: "Talegaon Dabhade, Pune",
       avatar: avatar,
-      points: 1240,
-      badgesCount: 5,
-      co2SavedKg: 48,
-      segregationScore: "100%",
+      points: 0,
+      badgesCount: 0,
+      co2SavedKg: 0,
+      segregationScore: "0%",
       authProvider: "firebase_google"
     };
 
@@ -238,17 +238,17 @@ const AuthEngine = {
     this.currentUser = {
       id: uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
       name: cleanName,
-      phone: "+91 98765 43210",
+      phone: "",
       email: email,
       role: this.selectedRole || "citizen",
       roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
       ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Samta Colony, Talegaon Dabhade",
+      address: "Talegaon Dabhade, Pune",
       avatar: avatar,
-      points: 1240,
-      badgesCount: 5,
-      co2SavedKg: 48,
-      segregationScore: "100%",
+      points: 0,
+      badgesCount: 0,
+      co2SavedKg: 0,
+      segregationScore: "0%",
       authProvider: "native_android_google"
     };
 
@@ -368,23 +368,25 @@ const AuthEngine = {
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=0F7943&color=fff`,
       role: "citizen",
       ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Samta Colony, Talegaon"
+      address: "Talegaon Dabhade, Pune"
     };
+
+    const isDemo = (email === "siddhantramteke06@gmail.com" || email === "ramesh.driver.pmc@gmail.com");
 
     this.currentUser = {
       id: `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
       name: acc.name,
-      phone: "+91 98765 43210",
+      phone: isDemo ? "+91 98765 43210" : "",
       email: acc.email,
       role: acc.role || "citizen",
       roleLabel: acc.role === 'driver' ? 'Municipal Driver' : 'Resident Citizen',
       ward: acc.ward || "Ward 2 (Talegaon Dabhade)",
-      address: acc.address || "Samta Colony, Talegaon",
+      address: acc.address || "Talegaon Dabhade, Pune",
       avatar: acc.avatar,
-      points: 1240,
-      badgesCount: 5,
-      co2SavedKg: 48,
-      segregationScore: "100%",
+      points: isDemo ? 1240 : 0,
+      badgesCount: isDemo ? 5 : 0,
+      co2SavedKg: isDemo ? 48 : 0,
+      segregationScore: isDemo ? "100%" : "0%",
       authProvider: "google"
     };
 
@@ -444,22 +446,47 @@ const AuthEngine = {
     // Update CityData
     if (typeof CityData !== 'undefined') {
       CityData.user.name = u.name;
-      CityData.user.phone = u.phone;
-      CityData.user.email = u.email;
+      CityData.user.phone = u.phone || "";
+      CityData.user.email = u.email || "";
       CityData.user.avatar = u.avatar;
-      CityData.user.points = u.points || 1240;
-      CityData.user.location = u.address || "Samta Colony, Talegaon";
+      CityData.user.points = u.points !== undefined ? u.points : 0;
+      CityData.user.badgesCount = u.badgesCount !== undefined ? u.badgesCount : 0;
+      CityData.user.location = u.address || "Talegaon Dabhade, Pune";
     }
 
     // 1. Update Profile Screen Header & Details
     const profileName = document.querySelector('.user-name');
     if (profileName) profileName.textContent = u.name;
 
+    const profileInfoName = document.getElementById('profile-info-name');
+    if (profileInfoName) profileInfoName.textContent = u.name;
+
     const profilePhone = document.querySelector('.user-phone');
-    if (profilePhone) profilePhone.textContent = u.phone;
+    if (profilePhone) profilePhone.textContent = u.phone || "Not linked";
+
+    const profileInfoPhone = document.getElementById('profile-info-phone');
+    if (profileInfoPhone) profileInfoPhone.textContent = u.phone || "Not linked";
 
     const profileEmail = document.querySelector('.user-email');
-    if (profileEmail) profileEmail.textContent = u.email;
+    if (profileEmail) profileEmail.textContent = u.email || "Not linked";
+
+    const profileInfoEmail = document.getElementById('profile-info-email');
+    if (profileInfoEmail) profileInfoEmail.textContent = u.email || "Not linked";
+
+    const profilePoints = document.getElementById('profile-menu-points');
+    if (profilePoints) profilePoints.textContent = (u.points !== undefined ? u.points : 0).toLocaleString();
+
+    const profileBadges = document.getElementById('profile-menu-badges');
+    if (profileBadges) profileBadges.textContent = u.badgesCount !== undefined ? u.badgesCount : 0;
+
+    const profileAddress = document.getElementById('profile-info-address');
+    if (profileAddress) profileAddress.textContent = u.address || "Talegaon Dabhade, Pune";
+
+    const profileArea = document.getElementById('profile-info-area');
+    if (profileArea) profileArea.textContent = u.ward || "Ward 2 (Talegaon Dabhade)";
+
+    const profileLocation = document.getElementById('profile-info-current-location');
+    if (profileLocation) profileLocation.textContent = u.address || "Talegaon Dabhade";
 
     const profileAvatar = document.getElementById('profile-avatar-img');
     if (profileAvatar && u.avatar) profileAvatar.src = u.avatar;
@@ -467,7 +494,7 @@ const AuthEngine = {
     // 2. Update Home Screen Top Greeting & Avatar
     const homeGreeting = document.querySelector('.user-greeting');
     if (homeGreeting) {
-      homeGreeting.innerHTML = `Hi, <strong>${u.name.split(' ')[0]}</strong> 👋`;
+      homeGreeting.innerHTML = `Hi, <strong>${(u.name || 'Citizen').split(' ')[0]}</strong> 👋`;
     }
     const homeAvatar = document.getElementById('home-user-avatar-img');
     if (homeAvatar && u.avatar) homeAvatar.src = u.avatar;
@@ -695,16 +722,25 @@ const AuthEngine = {
     // Accept generated OTP or fallback standard codes
     if (code === this.pendingOTP || code === "4920" || code === "1234" || code === "123456" || code.length === 6) {
       const nameInput = document.getElementById('auth-phone-name');
-      const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : (this.pendingPhone === "9876543210" ? "Siddhant Ramteke" : `Resident (+91 ${this.pendingPhone})`);
+      const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Resident (+91 ${this.pendingPhone})`;
+      const isDemo = (this.pendingPhone === "9876543210" || this.pendingPhone === "9822044556" || this.pendingPhone === "9422088990");
+      let baseAcc = isDemo ? (this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen) : {};
 
-      let baseAcc = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
       this.currentUser = {
-        ...baseAcc,
-        name: customName,
+        id: `USR-PH-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: isDemo ? baseAcc.name : customName,
         phone: `+91 ${this.pendingPhone || '9876543210'}`,
-        email: `${customName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        email: isDemo ? baseAcc.email : "",
         role: this.selectedRole || 'citizen',
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`
+        roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
+        ward: "Ward 2 (Talegaon Dabhade)",
+        address: "Talegaon Dabhade, Pune",
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`,
+        points: isDemo ? (baseAcc.points || 1240) : 0,
+        badgesCount: isDemo ? (baseAcc.badgesCount || 5) : 0,
+        co2SavedKg: isDemo ? (baseAcc.co2SavedKg || 48) : 0,
+        segregationScore: isDemo ? (baseAcc.segregationScore || "100%") : "0%",
+        authProvider: "phone_otp"
       };
       this.saveSession();
 
@@ -729,7 +765,7 @@ const AuthEngine = {
     const email = emailInput ? emailInput.value.trim() : '';
     const pass = passInput ? passInput.value.trim() : '';
     const name = nameInput ? nameInput.value.trim() : '';
-    const ward = wardSelect ? wardSelect.value : 'Ward 2 (Samta Colony)';
+    const ward = wardSelect ? wardSelect.value : 'Ward 2 (Talegaon Dabhade)';
 
     if (!email || !email.includes('@')) {
       if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter a valid email address");
@@ -749,17 +785,17 @@ const AuthEngine = {
       this.currentUser = {
         id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
         name: name,
-        phone: "+91 98765 43210",
+        phone: "",
         email: email,
         role: this.selectedRole || 'citizen',
         roleLabel: this.selectedRole === 'driver' ? 'Municipal Driver' : this.selectedRole === 'officer' ? 'Civic Officer' : 'Resident Citizen',
         ward: ward,
-        address: "Samta Colony, Talegaon Dabhade",
+        address: "Talegaon Dabhade, Pune",
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`,
-        points: 100, // Welcome points
-        badgesCount: 1,
+        points: 0,
+        badgesCount: 0,
         co2SavedKg: 0,
-        segregationScore: "100%",
+        segregationScore: "0%",
         authProvider: "email"
       };
 
