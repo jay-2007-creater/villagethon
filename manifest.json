@@ -9,13 +9,13 @@
   "theme_color": "#0F7943",
   "icons": [
     {
-      "src": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=192&auto=format&fit=crop&q=80",
+      "src": "assets/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=512&auto=format&fit=crop&q=80",
+      "src": "assets/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

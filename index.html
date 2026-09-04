@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CityAssist - Municipal Mobile App</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="apple-touch-icon" href="assets/logo.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0F7943">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -42,7 +44,9 @@
               <!-- Auth Hero Banner -->
               <div class="auth-hero-banner">
                 <div class="auth-logo-row">
-                  <div class="auth-logo-badge">🌿</div>
+                  <div class="auth-logo-badge">
+                    <img src="assets/logo.png" alt="CityAssist Logo" class="auth-brand-logo-img">
+                  </div>
                   <div class="auth-swachh-pill">🇮🇳 Swachh Bharat Mission</div>
                 </div>
                 <h1 class="auth-title">CityAssist</h1>
@@ -1499,13 +1503,19 @@
           <section class="screen-view active" id="screen-home">
             <!-- Top App Bar with Hamburger & Notifications -->
             <div class="home-top-navbar">
-              <button class="icon-action-btn dark-icon" onclick="CityAssist.openDrawer()" title="Menu">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round">
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <line x1="3" y1="12" x2="21" y2="12"></line>
-                  <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-              </button>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button class="icon-action-btn dark-icon" onclick="CityAssist.openDrawer()" title="Menu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </svg>
+                </button>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <img src="assets/logo.png" alt="CityAssist" style="height:28px; width:28px; object-fit:contain;">
+                  <span style="font-weight:800; font-size:1.05rem; color:#0F172A; letter-spacing:-0.3px;"><span style="color:#0F7943;">City</span>Assist</span>
+                </div>
+              </div>
               <button class="icon-action-btn dark-icon" onclick="CityAssist.showNotificationsModal()" title="Notifications">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -1532,9 +1542,12 @@
 
                 <!-- Titles & Greetings -->
                 <div class="home-greeting-text-block">
-                  <h1 class="brand-wordmark">
-                    <span class="brand-green">City</span><span class="brand-navy">Assist</span>
-                  </h1>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
+                    <img src="assets/logo.png" alt="CityAssist" style="height:34px; width:34px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(15,121,67,0.2));">
+                    <h1 class="brand-wordmark" style="margin:0;">
+                      <span class="brand-green">City</span><span class="brand-navy">Assist</span>
+                    </h1>
+                  </div>
                   <span class="greeting-sub">Good Morning,</span>
                   <h2 class="greeting-user-name">Citizen <span class="wave-emoji">👋</span></h2>
                   
@@ -2383,23 +2396,8 @@
           <div class="drawer-header green-theme">
             <div class="drawer-user-info">
               <div class="drawer-avatar">
-                <!-- Cartoon mascot with green shirt and recycling emblem -->
-                <div class="mascot-badge">
-                  <svg viewBox="0 0 80 80" class="mascot-svg">
-                    <circle cx="40" cy="40" r="38" fill="#FFFFFF"/>
-                    <!-- Hair -->
-                    <path d="M26,30 Q40,16 54,30 Q48,22 40,22 Q32,22 26,30 Z" fill="#1F2937"/>
-                    <!-- Face -->
-                    <circle cx="40" cy="34" r="14" fill="#FCD34D"/>
-                    <circle cx="35" cy="34" r="2" fill="#1F2937"/>
-                    <circle cx="45" cy="34" r="2" fill="#1F2937"/>
-                    <path d="M37,39 Q40,42 43,39" stroke="#1F2937" stroke-width="1.5" fill="none"/>
-                    <!-- Green Worker Uniform -->
-                    <path d="M22,50 Q40,44 58,50 L64,74 L16,74 Z" fill="#15803D"/>
-                    <path d="M34,50 L40,62 L46,50 Z" fill="#FEF08A"/>
-                    <!-- Recycle symbol on chest -->
-                    <circle cx="40" cy="66" r="4" fill="#166534"/>
-                  </svg>
+                <div class="mascot-badge" style="background:#FFFFFF; border-radius:50%; padding:3px; box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+                  <img src="assets/logo.png" alt="CityAssist Logo" style="width:100%; height:100%; object-fit:contain; border-radius:50%;">
                 </div>
               </div>
               <div class="drawer-title-group">
