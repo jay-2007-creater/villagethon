@@ -1100,9 +1100,42 @@ const AuthEngine = {
   },
 
   /**
+   * Handle real Native Android Google Sign-In response from AndroidGoogleAuthBridge
+   */
+  async handleNativeGoogleUserLogin(name, email, photoUrl, uid) {
+    if (!email && !uid) return;
+    const cleanName = name || (email ? email.split('@')[0] : "Resident Citizen");
+    const avatar = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
+
+    await this.handleFirebaseUserLogin({
+      uid: uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
+      displayName: cleanName,
+      email: email || "",
+      phoneNumber: "",
+      photoURL: avatar
+    });
+  },
+
+  /**
    * Trigger Real Google Sign-In
+   * 1. Android Native APK: Real Play Services Account Chooser via AndroidGoogleAuthBridge
+   * 2. Web / Desktop: Firebase Google Popup
    */
   async triggerGoogleSignIn() {
+    // 1. Android Native Play Services Device Account Chooser
+    if (typeof window.AndroidGoogleAuthBridge !== 'undefined' && window.AndroidGoogleAuthBridge.signIn) {
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("Selecting Google Account on device... 📱");
+      }
+      try {
+        window.AndroidGoogleAuthBridge.signIn();
+        return;
+      } catch (err) {
+        console.warn("Android native Google auth error:", err);
+      }
+    }
+
+    // 2. Desktop Web Browser / Chrome Firebase Popup
     if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
       try {
         if (typeof CityAssist !== 'undefined') {
