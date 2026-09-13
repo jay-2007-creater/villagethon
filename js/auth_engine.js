@@ -465,9 +465,6 @@ const AuthEngine = {
   /**
    * Sync verified user document to Cloud Firestore
    */
-  /**
-   * Sync verified user document to Cloud Firestore
-   */
   async syncProfileToFirestore() {
     if (!this.currentUser || typeof firebase === 'undefined' || !firebase.firestore) return;
     try {
@@ -478,16 +475,20 @@ const AuthEngine = {
 
       const profileData = {
         name: this.currentUser.name || 'Citizen',
+        displayName: this.currentUser.name || 'Citizen',
         email: this.currentUser.email || '',
         phone: this.currentUser.phone || '',
         address: this.currentUser.address || 'Talegaon Dabhade',
-        role: 'citizen',
+        role: this.currentUser.role || 'citizen',
+        authProvider: this.currentUser.authProvider || 'google',
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
       if (this.currentUser.avatar) {
         profileData.avatar = this.currentUser.avatar;
+        profileData.photoURL = this.currentUser.avatar;
       }
 
       // If officer or admin, include elevated municipal fields
@@ -501,9 +502,15 @@ const AuthEngine = {
       }
 
       await db.collection('users').doc(uid).set(profileData, { merge: true });
-      console.log("✅ User profile synced to Cloud Firestore:", uid);
+      console.log("✅ User profile synced to Cloud Firestore:", uid, profileData);
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("✓ Profile saved to Cloud Firestore ☁️");
+      }
     } catch (e) {
-      console.warn("Firestore user sync notice:", e);
+      console.error("Firestore user sync error:", e);
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("⚠️ Cloud sync notice: " + (e.message || "Saved locally"));
+      }
     }
   },
 
@@ -1352,38 +1359,66 @@ const AuthEngine = {
     if (!email && !uid) return;
     const cleanName = name || (email ? email.split('@')[0] : "Resident Citizen");
     const avatar = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
+    const googleId = uid || `USR-${Math.floor(1000 + Math.random() * 9000)}`;
 
     let fbUser = null;
     if (this.firebaseAuth) {
-      try {
-        if (!this.firebaseAuth.currentUser) {
-          const cred = await this.firebaseAuth.signInAnonymously();
-          fbUser = cred.user;
-        } else {
-          fbUser = this.firebaseAuth.currentUser;
-        }
+      // 1. Check if user already has an active Firebase session
+      if (this.firebaseAuth.currentUser) {
+        fbUser = this.firebaseAuth.currentUser;
+      }
 
-        if (fbUser) {
-          try {
-            await fbUser.updateProfile({
-              displayName: cleanName,
-              photoURL: avatar
-            });
-          } catch (e) {}
+      // 2. Authenticate user into Firebase Auth using verified Google email
+      // Since Email/Password provider IS enabled in Firebase console, we register/sign in the user
+      // with a deterministic app secret derived from Google ID so they are permanently stored in Firebase Authentication!
+      if (!fbUser && email) {
+        const secureKey = `CityAssist_Ggl_${googleId}_Secured!`;
+        try {
+          const cred = await this.firebaseAuth.signInWithEmailAndPassword(email, secureKey);
+          fbUser = cred.user;
+        } catch (signInErr) {
+          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
+            try {
+              const newCred = await this.firebaseAuth.createUserWithEmailAndPassword(email, secureKey);
+              fbUser = newCred.user;
+            } catch (createErr) {
+              console.warn("Firebase Auth account creation notice:", createErr);
+            }
+          } else {
+            console.warn("Firebase Auth sign-in notice:", signInErr);
+          }
         }
-      } catch (authErr) {
-        console.warn("Firebase Auth session initialization notice:", authErr);
+      }
+
+      // 3. Fallback to anonymous sign-in if enabled in console
+      if (!fbUser) {
+        try {
+          const anonCred = await this.firebaseAuth.signInAnonymously();
+          fbUser = anonCred.user;
+        } catch (anonErr) {
+          console.warn("Anonymous auth notice:", anonErr);
+        }
+      }
+
+      if (fbUser) {
+        try {
+          await fbUser.updateProfile({
+            displayName: cleanName,
+            photoURL: avatar
+          });
+        } catch (e) {}
       }
     }
 
-    const effectiveUid = (fbUser && fbUser.uid) ? fbUser.uid : (uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`);
+    const effectiveUid = (fbUser && fbUser.uid) ? fbUser.uid : (googleId || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`);
 
     await this.handleFirebaseUserLogin({
       uid: effectiveUid,
       displayName: cleanName,
       email: email || "",
       phoneNumber: "",
-      photoURL: avatar
+      photoURL: avatar,
+      authProvider: "google"
     });
   },
 
@@ -1419,6 +1454,7 @@ const AuthEngine = {
 
         const result = await this.firebaseAuth.signInWithPopup(provider);
         if (result && result.user) {
+          result.user.authProvider = "google";
           await this.handleFirebaseUserLogin(result.user);
           return;
         }

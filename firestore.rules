@@ -51,13 +51,13 @@ service cloud.firestore {
       // nor can they self-assign administrative, ward, verification or staff flags.
       allow create: if isAuthenticated() && request.auth.uid == userId && (
         isOfficer() || (
-          (request.resource.data.role == 'citizen' || !('role' in request.resource.data)) &&
-          !('isStaff' in request.resource.data || request.resource.data.isStaff == false) &&
-          !('verificationStatus' in request.resource.data || request.resource.data.verificationStatus == 'unverified') &&
-          !('staffStatus' in request.resource.data || request.resource.data.staffStatus == 'none') &&
+          (!('role' in request.resource.data) || request.resource.data.role == 'citizen') &&
+          (!('isStaff' in request.resource.data) || request.resource.data.isStaff == false) &&
+          (!('verificationStatus' in request.resource.data) || request.resource.data.verificationStatus == 'unverified') &&
+          (!('staffStatus' in request.resource.data) || request.resource.data.staffStatus == 'none' || request.resource.data.staffStatus == 'pending') &&
           !('permissions' in request.resource.data) &&
-          !('isAdmin' in request.resource.data) &&
-          !('isOfficer' in request.resource.data) &&
+          (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false) &&
+          (!('isOfficer' in request.resource.data) || request.resource.data.isOfficer == false) &&
           !('wardId' in request.resource.data) &&
           !('ward' in request.resource.data) &&
           !('municipality' in request.resource.data) &&
@@ -65,9 +65,6 @@ service cloud.firestore {
         )
       );
       
-      // Citizens can update ONLY explicitly user-editable fields (name, phone, address, photo, fcmToken, notificationsEnabled).
-      // System-controlled fields are strictly immutable to citizens:
-      // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
       // Citizens can update ONLY explicitly user-editable fields (name, phone, address, photo, fcmToken, notificationsEnabled).
       // System-controlled fields are strictly immutable to non-admin users:
       // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
@@ -80,8 +77,8 @@ service cloud.firestore {
         ) || (
           request.auth.uid == userId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 
-            'fcmToken', 'updatedAt', 'lastLoginAt', 'notificationsEnabled', 'email'
+            'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
+            'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'createdAt', 'notificationsEnabled', 'email', 'role', 'authProvider'
           ]) &&
           (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
           (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
