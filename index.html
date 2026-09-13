@@ -104,37 +104,53 @@
                     <label class="auth-field-label" for="auth-phone-input" data-i18n="auth_label_mobile">Mobile Number</label>
                     <div class="auth-phone-input-row">
                       <span class="auth-country-code">🇮🇳 +91</span>
-                      <input type="tel" id="auth-phone-input" class="auth-text-input" placeholder="98765 43210" maxlength="10" value="">
+                      <input type="tel" id="auth-phone-input" class="auth-text-input" placeholder="98765 43210" maxlength="10" value="" autocomplete="tel">
                     </div>
                   </div>
 
                   <!-- Name for Mobile User (Optional) -->
                   <div class="auth-form-group" id="auth-phone-name-group" style="margin-top:8px;">
                     <label class="auth-field-label" for="auth-phone-name" data-i18n="auth_label_fullname">Full Name (Optional)</label>
-                    <input type="text" id="auth-phone-name" class="auth-text-input" placeholder="e.g. Siddhant Ramteke">
+                    <input type="text" id="auth-phone-name" class="auth-text-input" placeholder="e.g. Siddhant Ramteke" autocomplete="name">
                   </div>
 
-                  <!-- OTP Digits Box (Auto revealed after send OTP) -->
-                  <div id="auth-otp-verify-box" style="display:none; margin-top:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                      <label class="auth-field-label" style="margin:0;">Enter 6-Digit OTP</label>
-                      <span id="auth-otp-badge" style="font-size:0.72rem; color:#15803D; font-weight:800; background:#DCFCE7; padding:2px 8px; border-radius:10px;">Security Code Sent 📩</span>
+                  <!-- OTP Verification Box (Revealed upon Request OTP) -->
+                  <div id="auth-otp-verify-box" style="display:none;">
+                    <!-- Real-time Verification Status Card -->
+                    <div id="auth-otp-status-card" class="otp-status-card">
+                      <div class="otp-status-header">
+                        <span id="auth-otp-badge" class="otp-badge-pill">Security Code Sent 📩</span>
+                        <button type="button" id="auth-otp-autofill-btn" class="otp-autofill-action" onclick="AuthEngine.autofillGeneratedCode()" style="display:none;">
+                          ⚡ Auto-fill Code
+                        </button>
+                      </div>
+                      <div id="auth-otp-info-msg" class="otp-info-text">
+                        Enter the 6-digit verification code below to proceed.
+                      </div>
                     </div>
-                    <div class="auth-otp-inputs-row" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:6px;">
-                      <input type="tel" id="auth-otp-1" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(1)" onkeydown="AuthEngine.onOtpKeyDown(event, 1)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-                      <input type="tel" id="auth-otp-2" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(2)" onkeydown="AuthEngine.onOtpKeyDown(event, 2)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-                      <input type="tel" id="auth-otp-3" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(3)" onkeydown="AuthEngine.onOtpKeyDown(event, 3)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-                      <input type="tel" id="auth-otp-4" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(4)" onkeydown="AuthEngine.onOtpKeyDown(event, 4)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-                      <input type="tel" id="auth-otp-5" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(5)" onkeydown="AuthEngine.onOtpKeyDown(event, 5)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-                      <input type="tel" id="auth-otp-6" class="otp-box" maxlength="1" oninput="AuthEngine.onOtpInput(6)" onkeydown="AuthEngine.onOtpKeyDown(event, 6)" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; margin-bottom:4px;">
+                      <label class="auth-field-label" style="margin:0;">ENTER 6-DIGIT OTP</label>
+                      <span id="auth-otp-counter-badge" style="font-size:0.72rem; color:#64748B; font-weight:700;">6 Digits</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:#64748B; margin-top:8px;">
+
+                    <!-- 6 Digits Row: Strictly constrained with min-width: 0 in style.css -->
+                    <div class="auth-otp-inputs-row" id="auth-otp-inputs-container">
+                      <input type="tel" id="auth-otp-1" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                      <input type="tel" id="auth-otp-2" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+                      <input type="tel" id="auth-otp-3" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+                      <input type="tel" id="auth-otp-4" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+                      <input type="tel" id="auth-otp-5" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+                      <input type="tel" id="auth-otp-6" class="otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]*">
+                    </div>
+
+                    <div class="auth-otp-footer">
                       <span id="auth-otp-timer-label">Resend in <strong id="auth-otp-seconds">30s</strong></span>
-                      <button type="button" id="auth-otp-resend-btn" onclick="AuthEngine.requestMobileOTP()" style="background:none; border:none; color:#94A3B8; font-weight:800; cursor:not-allowed; padding:0;" disabled>Resend OTP</button>
+                      <button type="button" id="auth-otp-resend-btn" onclick="AuthEngine.requestMobileOTP()" disabled>Resend OTP</button>
                     </div>
                   </div>
 
-                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()" style="margin-top:12px;" data-i18n="auth_btn_send_otp">
+                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()" data-i18n="auth_btn_send_otp">
                     Send Verification OTP ➜
                   </button>
 
@@ -153,19 +169,19 @@
                   <!-- Signup Name Field (Shown only on signup mode) -->
                   <div class="auth-form-group" id="auth-group-name" style="display:none;">
                     <label class="auth-field-label" for="auth-fullname-input">Full Name</label>
-                    <input type="text" id="auth-fullname-input" class="auth-text-input" placeholder="e.g. Siddhant Ramteke">
+                    <input type="text" id="auth-fullname-input" class="auth-text-input" placeholder="e.g. Siddhant Ramteke" autocomplete="name">
                   </div>
 
                   <!-- Email Address -->
                   <div class="auth-form-group">
                     <label class="auth-field-label" for="auth-email-val">Email Address</label>
-                    <input type="email" id="auth-email-val" class="auth-text-input" placeholder="citizen@gmail.com">
+                    <input type="email" id="auth-email-val" class="auth-text-input" placeholder="citizen@gmail.com" autocomplete="email">
                   </div>
 
                   <!-- Password -->
                   <div class="auth-form-group">
                     <label class="auth-field-label" for="auth-pass-val">Password</label>
-                    <input type="password" id="auth-pass-val" class="auth-text-input" placeholder="••••••••">
+                    <input type="password" id="auth-pass-val" class="auth-text-input" placeholder="••••••••" autocomplete="current-password">
                   </div>
 
                   <!-- Ward / Locality (Signup only) -->
@@ -189,7 +205,7 @@
                   <span data-i18n="auth_or_continue">OR CONTINUE WITH</span>
                 </div>
 
-                <button type="button" class="auth-google-btn" onclick="AuthEngine.triggerGoogleSignIn()" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; background:#FFFFFF; border:1.5px solid #CBD5E1; color:#1E293B; font-weight:800; font-size:0.92rem; padding:12px; border-radius:14px; margin-bottom:14px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                <button type="button" class="auth-google-btn" onclick="AuthEngine.triggerGoogleSignIn()">
                   <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -200,8 +216,8 @@
                 </button>
 
                 <!-- Production Security Information Badge -->
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px; font-size:0.75rem; color:#64748B; line-height:1.4; display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-                  <span style="font-size:1.1rem;">🏛️</span>
+                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px; padding:12px 14px; font-size:0.75rem; color:#475569; line-height:1.45; display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                  <span style="font-size:1.25rem;">🏛️</span>
                   <span><strong>Talegaon Municipal Portal:</strong> Drivers and Municipal Officers are verified against official municipality records. Citizens can register securely.</span>
                 </div>
 

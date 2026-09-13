@@ -1410,13 +1410,13 @@ const UIComponents = {
       </div>
 
       <!-- 6-Digit OTP Inputs -->
-      <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-bottom:16px;">
-        <input type="tel" maxlength="1" id="modal-otp-1" class="otp-digit-box" autofocus oninput="if(this.value) document.getElementById('modal-otp-2').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-        <input type="tel" maxlength="1" id="modal-otp-2" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-3').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-        <input type="tel" maxlength="1" id="modal-otp-3" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-4').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-        <input type="tel" maxlength="1" id="modal-otp-4" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-5').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-        <input type="tel" maxlength="1" id="modal-otp-5" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-6').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
-        <input type="tel" maxlength="1" id="modal-otp-6" class="otp-digit-box" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+      <div style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:6px; width:100%; box-sizing:border-box; margin-bottom:16px;">
+        <input type="tel" maxlength="1" id="modal-otp-1" class="otp-digit-box" autofocus inputmode="numeric" pattern="[0-9]*" oninput="if(this.value) document.getElementById('modal-otp-2').focus()">
+        <input type="tel" maxlength="1" id="modal-otp-2" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" oninput="if(this.value) document.getElementById('modal-otp-3').focus()">
+        <input type="tel" maxlength="1" id="modal-otp-3" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" oninput="if(this.value) document.getElementById('modal-otp-4').focus()">
+        <input type="tel" maxlength="1" id="modal-otp-4" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" oninput="if(this.value) document.getElementById('modal-otp-5').focus()">
+        <input type="tel" maxlength="1" id="modal-otp-5" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*" oninput="if(this.value) document.getElementById('modal-otp-6').focus()">
+        <input type="tel" maxlength="1" id="modal-otp-6" class="otp-digit-box" inputmode="numeric" pattern="[0-9]*">
       </div>
 
       <!-- Verify Button -->
