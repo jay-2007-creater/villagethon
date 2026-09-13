@@ -460,22 +460,43 @@ const AuthEngine = {
   /**
    * Sync verified user document to Cloud Firestore
    */
+  /**
+   * Sync verified user document to Cloud Firestore
+   */
   async syncProfileToFirestore() {
     if (!this.currentUser || typeof firebase === 'undefined' || !firebase.firestore) return;
     try {
       const db = firebase.firestore();
-      const uid = this.currentUser.id;
-      await db.collection('users').doc(uid).set({
-        name: this.currentUser.name,
+      const currentAuthUser = (this.firebaseAuth && this.firebaseAuth.currentUser) ? this.firebaseAuth.currentUser : null;
+      const uid = (currentAuthUser && currentAuthUser.uid) ? currentAuthUser.uid : (this.currentUser.id || this.currentUser.uid);
+      if (!uid) return;
+
+      const profileData = {
+        name: this.currentUser.name || 'Citizen',
         email: this.currentUser.email || '',
         phone: this.currentUser.phone || '',
-        role: this.currentUser.role || 'citizen',
-        ward: this.currentUser.ward || 'Ward 2 (Talegaon Dabhade)',
         address: this.currentUser.address || 'Talegaon Dabhade',
-        permissions: this.currentUser.permissions || [],
-        staffStatus: this.currentUser.staffStatus || 'none',
-        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+        role: 'citizen',
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      if (this.currentUser.avatar) {
+        profileData.avatar = this.currentUser.avatar;
+      }
+
+      // If officer or admin, include elevated municipal fields
+      if (this.isAuthorizedForRole('officer') || this.isAuthorizedForRole('admin')) {
+        profileData.role = this.currentUser.role;
+        profileData.ward = this.currentUser.ward;
+        if (this.currentUser.wardId !== undefined) profileData.wardId = this.currentUser.wardId;
+        if (this.currentUser.municipalityId) profileData.municipalityId = this.currentUser.municipalityId;
+        if (this.currentUser.permissions && this.currentUser.permissions.length > 0) profileData.permissions = this.currentUser.permissions;
+        profileData.staffStatus = 'approved';
+      }
+
+      await db.collection('users').doc(uid).set(profileData, { merge: true });
+      console.log("✅ User profile synced to Cloud Firestore:", uid);
     } catch (e) {
       console.warn("Firestore user sync notice:", e);
     }
@@ -743,7 +764,30 @@ const AuthEngine = {
   },
 
   /**
-   * Send Mobile OTP via Firebase Phone Auth with reCAPTCHA
+   * Initialize Firebase reCAPTCHA for real SMS verification
+   */
+  setupRecaptcha() {
+    if (typeof firebase === 'undefined' || !firebase.auth) return;
+    if (!this.recaptchaVerifier) {
+      try {
+        this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+          size: 'invisible',
+          callback: (response) => {
+            console.log("reCAPTCHA verified successfully for phone auth.");
+          },
+          'expired-callback': () => {
+            console.warn("reCAPTCHA expired, resetting...");
+            this.recaptchaVerifier = null;
+          }
+        }, this.firebaseAuth);
+      } catch (err) {
+        console.warn("Error creating RecaptchaVerifier:", err);
+      }
+    }
+  },
+
+  /**
+   * Send Real Mobile OTP via Firebase Phone Auth with reCAPTCHA
    */
   async requestMobileOTP() {
     const phoneInput = document.getElementById('auth-phone-input');
@@ -759,50 +803,66 @@ const AuthEngine = {
     this.pendingPhone = phone;
     const fullPhoneNumber = `+91${phone}`;
 
-    const verifyBox = document.getElementById('auth-otp-verify-box');
-    const primaryBtn = document.getElementById('auth-otp-primary-btn');
-    if (verifyBox) verifyBox.style.display = 'block';
-    if (primaryBtn) primaryBtn.textContent = 'Verify OTP & Sign In ➜';
-
-    // Clear any previous OTP inputs (no hardcoded auto-fill)
-    for (let i = 1; i <= 6; i++) {
-      const box = document.getElementById(`auth-otp-${i}`);
-      if (box) box.value = '';
-    }
-
-    // Attempt Firebase Phone Auth SMS
+    // Real Firebase Phone Auth SMS
     if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
       try {
         this.setupRecaptcha();
         if (typeof CityAssist !== 'undefined') {
-          CityAssist.showToast(`📱 Requesting SMS OTP via Firebase Auth for +91 ${phone}...`);
+          CityAssist.showToast(`📱 Requesting SMS OTP via Firebase for +91 ${phone}...`);
         }
         
         const confirmation = await this.firebaseAuth.signInWithPhoneNumber(fullPhoneNumber, this.recaptchaVerifier);
         this.confirmationResult = confirmation;
-        
+
+        const verifyBox = document.getElementById('auth-otp-verify-box');
+        const primaryBtn = document.getElementById('auth-otp-primary-btn');
+        if (verifyBox) verifyBox.style.display = 'block';
+        if (primaryBtn) primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+
+        // Clear any previous OTP inputs
+        for (let i = 1; i <= 6; i++) {
+          const box = document.getElementById(`auth-otp-${i}`);
+          if (box) box.value = '';
+        }
+
         if (typeof CityAssist !== 'undefined') {
           CityAssist.showToast(`📩 Verification code sent via SMS to +91 ${phone}!`);
         }
-        this.startOtpTimer(45);
+        this.startOtpTimer(60);
         setTimeout(() => { document.getElementById('auth-otp-1')?.focus(); }, 100);
         return;
       } catch (err) {
-        console.warn("Firebase Phone Auth SMS notice:", err);
+        console.warn("Firebase Phone Auth SMS error:", err);
+        if (this.recaptchaVerifier) {
+          try {
+            this.recaptchaVerifier.clear();
+            this.recaptchaVerifier = null;
+          } catch(e) {}
+        }
+
+        let friendlyMsg = "Unable to send SMS OTP.";
+        if (err.code === 'auth/invalid-phone-number') {
+          friendlyMsg = "Invalid mobile number format (+91).";
+        } else if (err.code === 'auth/too-many-requests') {
+          friendlyMsg = "Too many requests. Please wait a few minutes before retrying.";
+        } else if (err.code === 'auth/quota-exceeded') {
+          friendlyMsg = "SMS quota limit reached in Firebase console. Please contact admin.";
+        } else if (err.code === 'auth/captcha-check-failed') {
+          friendlyMsg = "reCAPTCHA check failed. Please retry.";
+        } else if (err.message) {
+          friendlyMsg = err.message;
+        }
+
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast(`⚠️ SMS Error: ${friendlyMsg}`);
+        }
+        return;
+      }
+    } else {
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("⚠️ Firebase Auth service is currently offline.");
       }
     }
-
-    // Cryptographic Session OTP (used when SMS quota/offline environment is active)
-    const array = new Uint32Array(1);
-    window.crypto.getRandomValues(array);
-    this.pendingGeneratedOTP = (100000 + (array[0] % 900000)).toString();
-
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`📩 OTP dispatched to +91 ${phone}! Security Code: ${this.pendingGeneratedOTP}`);
-    }
-
-    this.startOtpTimer(30);
-    setTimeout(() => { document.getElementById('auth-otp-1')?.focus(); }, 100);
   },
 
   startOtpTimer(seconds = 30) {
@@ -874,81 +934,26 @@ const AuthEngine = {
         if (typeof CityAssist !== 'undefined') CityAssist.showToast("Verifying code with Firebase Authentication... 🔐");
         const result = await this.confirmationResult.confirm(code);
         if (result && result.user) {
+          const nameInput = document.getElementById('auth-phone-name');
+          const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "";
+          if (customName) {
+            try {
+              await result.user.updateProfile({ displayName: customName });
+            } catch (e) {}
+          }
           await this.handleFirebaseUserLogin(result.user);
           return;
         }
       } catch (err) {
+        console.warn("Firebase confirmation error:", err);
         if (typeof CityAssist !== 'undefined') {
-          CityAssist.showToast("❌ Invalid verification code. Please check SMS and try again.");
+          CityAssist.showToast("❌ Invalid verification code. Please check your SMS and try again.");
         }
         return;
       }
-    }
-
-    // 2. Cryptographic Session OTP Check
-    if (this.pendingGeneratedOTP && code === this.pendingGeneratedOTP) {
-      const nameInput = document.getElementById('auth-phone-name');
-      const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Resident (+91 ${this.pendingPhone})`;
-      
-      const authCheck = await this.verifyStaffAuthorization(this.pendingPhone);
-
-      let assignedRole = 'citizen';
-      let roleLabel = 'Resident Citizen';
-      let assignedVehicle = null;
-      let assignedVehicleId = null;
-      let assignedWard = 'Ward 2 (Talegaon Dabhade)';
-      let assignedWardId = 2;
-      let municipalityId = null;
-      let permissions = [];
-      let staffStatus = 'none';
-
-      if (authCheck.authorized && authCheck.staffRecord) {
-        assignedRole = authCheck.role;
-        roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Fleet Driver' : (assignedRole === 'admin' ? 'Chief Administrator' : 'Civic Officer'));
-        assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
-        assignedVehicleId = authCheck.staffRecord?.vehicleId || null;
-        assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
-        assignedWardId = authCheck.staffRecord?.wardId !== undefined ? authCheck.staffRecord.wardId : assignedWardId;
-        municipalityId = authCheck.staffRecord?.municipalityId || null;
-        permissions = authCheck.permissions || [];
-        staffStatus = 'approved';
-      }
-
-      this.currentUser = {
-        id: `USR-PH-${Math.floor(1000 + Math.random() * 9000)}`,
-        name: authCheck.staffRecord?.name || customName,
-        phone: `+91 ${this.pendingPhone}`,
-        email: authCheck.staffRecord?.email || "",
-        role: assignedRole,
-        roleLabel: roleLabel,
-        ward: assignedWard,
-        wardId: assignedWardId,
-        vehicleId: assignedVehicleId,
-        vehicleNumber: assignedVehicle,
-        municipalityId: municipalityId,
-        permissions: permissions,
-        staffStatus: staffStatus,
-        approved: staffStatus === 'approved',
-        address: "Talegaon Dabhade, Pune",
-        avatar: authCheck.staffRecord?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`,
-        points: 0,
-        badgesCount: 0,
-        co2SavedKg: 0,
-        segregationScore: "0%",
-        authProvider: "phone_otp"
-      };
-
-      this.saveSession();
-      this.syncProfileToFirestore();
-      this.updateRoleUI();
-
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast(`✓ Phone Verified! Welcome, ${this.currentUser.name} 🎉`);
-        this.routeAfterAuth();
-      }
     } else {
       if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("❌ Incorrect verification code. Please try again.");
+        CityAssist.showToast("⚠️ No active OTP request. Please tap 'Send Verification OTP' first.");
       }
     }
   },
@@ -1107,8 +1112,33 @@ const AuthEngine = {
     const cleanName = name || (email ? email.split('@')[0] : "Resident Citizen");
     const avatar = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
 
+    let fbUser = null;
+    if (this.firebaseAuth) {
+      try {
+        if (!this.firebaseAuth.currentUser) {
+          const cred = await this.firebaseAuth.signInAnonymously();
+          fbUser = cred.user;
+        } else {
+          fbUser = this.firebaseAuth.currentUser;
+        }
+
+        if (fbUser) {
+          try {
+            await fbUser.updateProfile({
+              displayName: cleanName,
+              photoURL: avatar
+            });
+          } catch (e) {}
+        }
+      } catch (authErr) {
+        console.warn("Firebase Auth session initialization notice:", authErr);
+      }
+    }
+
+    const effectiveUid = (fbUser && fbUser.uid) ? fbUser.uid : (uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`);
+
     await this.handleFirebaseUserLogin({
-      uid: uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
+      uid: effectiveUid,
       displayName: cleanName,
       email: email || "",
       phoneNumber: "",
