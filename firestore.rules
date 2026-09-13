@@ -1,0 +1,256 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user has municipal officer / admin custom claims
+    // Strictly requires cryptographic custom claims; email domain regex is NOT permitted
+    function isOfficer() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'officer' || 
+        request.auth.token.role == 'municipality' || 
+        request.auth.token.role == 'admin' ||
+        request.auth.token.isOfficer == true ||
+        request.auth.token.isAdmin == true
+      );
+    }
+
+    // Helper function to check if user has sanitation driver role (strictly separated from officer)
+    function isDriver() {
+      return isAuthenticated() && request.auth.token.role == 'driver';
+    }
+
+    // Helper function to check if a citizen belongs to the authorized ward for this vehicle.
+    // Relies solely on trusted cryptographic custom claims or system-controlled user records.
+    function isCitizenInVehicleWard() {
+      return isAuthenticated() && (
+        (request.auth.token.wardId != null && request.auth.token.wardId == resource.data.wardId) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.wardId == resource.data.wardId)
+      );
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      // Users can read their own profile; officers can read profiles for municipal triage
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isOfficer());
+      
+      // Citizens can create initial profile, but CANNOT self-assign 'driver', 'officer', 'admin',
+      // nor can they self-assign administrative, ward, verification or staff flags.
+      allow create: if isAuthenticated() && request.auth.uid == userId && (
+        isOfficer() || (
+          (request.resource.data.role == 'citizen' || !('role' in request.resource.data)) &&
+          !('isStaff' in request.resource.data || request.resource.data.isStaff == false) &&
+          !('verificationStatus' in request.resource.data || request.resource.data.verificationStatus == 'unverified') &&
+          !('staffStatus' in request.resource.data || request.resource.data.staffStatus == 'none') &&
+          !('permissions' in request.resource.data) &&
+          !('isAdmin' in request.resource.data) &&
+          !('isOfficer' in request.resource.data) &&
+          !('wardId' in request.resource.data) &&
+          !('ward' in request.resource.data) &&
+          !('municipality' in request.resource.data) &&
+          !('municipalityId' in request.resource.data)
+        )
+      );
+      
+      // Citizens can update ONLY explicitly user-editable fields (name, phone, address, photo, fcmToken, notificationsEnabled).
+      // System-controlled fields are strictly immutable to citizens:
+      // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
+      allow update: if isAuthenticated() && request.auth.uid == userId && (
+        isOfficer() || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 
+            'fcmToken', 'updatedAt', 'lastLoginAt', 'notificationsEnabled', 'email'
+          ]) &&
+          (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
+          (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
+          (!('ward' in resource.data) || request.resource.data.ward == resource.data.ward) &&
+          (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt) &&
+          (!('verificationStatus' in resource.data) || request.resource.data.verificationStatus == resource.data.verificationStatus) &&
+          (!('staffStatus' in resource.data) || request.resource.data.staffStatus == resource.data.staffStatus) &&
+          (!('isStaff' in resource.data) || request.resource.data.isStaff == resource.data.isStaff) &&
+          (!('permissions' in resource.data) || request.resource.data.permissions == resource.data.permissions) &&
+          (!('municipality' in resource.data) || request.resource.data.municipality == resource.data.municipality) &&
+          (!('municipalityId' in resource.data) || request.resource.data.municipalityId == resource.data.municipalityId)
+        )
+      );
+      
+      allow delete: if isOfficer();
+    }
+
+    // 2. Municipality-Approved Staff Registry (Drivers & Officers)
+    match /staff_registry/{staffId} {
+      // Officers can inspect any staff record
+      // Individual staff/applicants can only read their own staff verification record
+      allow get: if isOfficer() || (
+        isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          (resource.data.email != null && resource.data.email == request.auth.token.email) ||
+          (resource.data.phone != null && resource.data.phone == request.auth.token.phone_number)
+        )
+      );
+
+      // Only municipal officers/admins can list or query the staff registry collection
+      allow list: if isOfficer();
+      
+      // Citizen-created staff verification requests MUST always have status == 'pending'
+      // Citizens are strictly prohibited from setting administrative, approval, or permission fields on creation
+      allow create: if isAuthenticated() && (
+        isOfficer() || 
+        (
+          request.resource.data.status == 'pending' &&
+          (
+            request.resource.data.userId == request.auth.uid ||
+            (request.resource.data.email != null && request.resource.data.email == request.auth.token.email) ||
+            (request.resource.data.phone != null && request.resource.data.phone == request.auth.token.phone_number)
+          ) &&
+          !('approvedAt' in request.resource.data) &&
+          !('approvedBy' in request.resource.data) &&
+          !('permissions' in request.resource.data) &&
+          !('isAdmin' in request.resource.data) &&
+          !('isOfficer' in request.resource.data) &&
+          (!('role' in request.resource.data) || request.resource.data.role in ['driver_applicant', 'officer_applicant', 'staff_applicant'])
+        )
+      );
+
+      // Only authorized Municipal Admins/Officers can approve, assign roles, or delete staff records
+      allow update, delete: if isOfficer();
+    }
+
+    // 3. Citizen Grievances Collection
+    match /grievances/{reportId} {
+      // Only the grievance creator and authorized municipal officers can read the grievance (NO public read)
+      allow read: if isAuthenticated() && (
+        isOfficer() || 
+        resource.data.citizenUid == request.auth.uid
+      );
+
+      // Authenticated citizen can submit a grievance strictly under their own citizenUid with pending status
+      // Citizen CANNOT submit arbitrary administrative fields (assignedSquad, assignedTo, resolutionNotes, resolvedAt)
+      allow create: if isAuthenticated() 
+                    && request.resource.data.citizenUid == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.title is string 
+                    && request.resource.data.title.size() > 0
+                    && request.resource.data.title.size() <= 200
+                    && request.resource.data.description is string 
+                    && request.resource.data.description.size() <= 2000
+                    && !('assignedSquad' in request.resource.data)
+                    && !('assignedTo' in request.resource.data)
+                    && !('resolutionNotes' in request.resource.data)
+                    && !('resolvedAt' in request.resource.data)
+                    && !('internalNotes' in request.resource.data);
+
+      // Officers can triage, assign squads, update status, and add resolution notes.
+      // Citizens can only update user-editable content (e.g. description, photos, feedback) without modifying system fields:
+      // - status, assignedSquad, assignedTo, wardId, ward, lat, lng, citizenUid, createdAt, resolvedAt, resolutionNotes
+      allow update: if isAuthenticated() && (
+        isOfficer() || 
+        (
+          request.auth.uid == resource.data.citizenUid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'description', 'photos', 'imageUrl', 'feedback', 'citizenNotes', 'contactPhone', 'updatedAt'
+          ]) &&
+          request.resource.data.citizenUid == resource.data.citizenUid &&
+          request.resource.data.status == resource.data.status &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          (!('assignedSquad' in resource.data) || request.resource.data.assignedSquad == resource.data.assignedSquad) &&
+          (!('assignedTo' in resource.data) || request.resource.data.assignedTo == resource.data.assignedTo) &&
+          (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
+          (!('ward' in resource.data) || request.resource.data.ward == resource.data.ward) &&
+          (!('lat' in resource.data) || request.resource.data.lat == resource.data.lat) &&
+          (!('lng' in resource.data) || request.resource.data.lng == resource.data.lng) &&
+          (!('resolvedAt' in resource.data) || request.resource.data.resolvedAt == resource.data.resolvedAt) &&
+          (!('resolutionNotes' in resource.data) || request.resource.data.resolutionNotes == resource.data.resolutionNotes) &&
+          (!('internalNotes' in resource.data) || request.resource.data.internalNotes == resource.data.internalNotes)
+        )
+      );
+
+      // Prevent accidental or malicious deletion of civic records
+      allow delete: if false;
+    }
+
+    // 4. Municipal Advisories & Citizen Notices
+    match /advisories/{noticeId} {
+      // Public read access for official citizen alerts
+      allow read: if true;
+
+      // Only authorized TDMC Municipal Officers can publish or modify alerts
+      allow write: if isOfficer();
+    }
+
+    // 5. Municipal Fleet & Telemetry (Vehicles GCV-001..GCV-006)
+    match /vehicles/{vehicleId} {
+      // Document get access:
+      // - Municipal Officers: can read all vehicles
+      // - Drivers: can read ONLY their assigned vehicle
+      // - Citizens: can read ONLY their authorized area/ward assigned vehicle
+      allow get: if isOfficer() ||
+                    (isDriver() && (resource.data.currentDriver.id == request.auth.uid || request.auth.token.vehicleId == vehicleId || resource.data.vehicleId == request.auth.token.vehicleId)) ||
+                    isCitizenInVehicleWard();
+
+      // Collection-wide listing / querying:
+      // ONLY Municipal Officers / Command Center can query/list all fleet vehicles!
+      // Citizens and Drivers are blocked from bulk downloading fleet records
+      allow list: if isOfficer();
+
+      // Only TDMC Municipal Officers/Admins can create or delete fleet vehicles
+      allow create, delete: if isOfficer();
+
+      // Officers can update all fields (including driver re-assignment, license plate, routes, and wards).
+      // Drivers can ONLY update approved live telemetry/status fields:
+      // lat, lng, speed, heading, progressPct, status, timestamp, updatedAt, lastUpdate, currentLocation, fuel, battery, wasteLevel.
+      // Drivers MUST NOT modify:
+      // - vehicleId, licensePlate, make, model, capacity, type
+      // - currentDriver details (cannot reassign driver)
+      // - wardId, assignedWard, assignedZone, routeId, routeName (cannot reassign operational zones)
+      // - any other administrative or ownership fields
+      allow update: if isOfficer() || (
+        isDriver() && 
+        (resource.data.currentDriver.id == request.auth.uid || request.auth.token.vehicleId == vehicleId || resource.data.vehicleId == request.auth.token.vehicleId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lat', 'lng', 'speed', 'heading', 'progressPct', 'status', 'timestamp', 'updatedAt', 'lastUpdate', 'currentLocation', 'battery', 'fuel', 'wasteLevel'
+        ]) &&
+        request.resource.data.vehicleId == resource.data.vehicleId &&
+        request.resource.data.wardId == resource.data.wardId &&
+        request.resource.data.routeId == resource.data.routeId &&
+        request.resource.data.currentDriver == resource.data.currentDriver &&
+        (!('licensePlate' in resource.data) || request.resource.data.licensePlate == resource.data.licensePlate) &&
+        (!('make' in resource.data) || request.resource.data.make == resource.data.make) &&
+        (!('model' in resource.data) || request.resource.data.model == resource.data.model) &&
+        (!('capacity' in resource.data) || request.resource.data.capacity == resource.data.capacity) &&
+        (!('assignedWard' in resource.data) || request.resource.data.assignedWard == resource.data.assignedWard) &&
+        (!('assignedZone' in resource.data) || request.resource.data.assignedZone == resource.data.assignedZone) &&
+        (!('routeName' in resource.data) || request.resource.data.routeName == resource.data.routeName) &&
+        (!('type' in resource.data) || request.resource.data.type == resource.data.type) &&
+        // Telemetry value validations where practical
+        (!('speed' in request.resource.data) || (request.resource.data.speed is number && request.resource.data.speed >= 0 && request.resource.data.speed <= 160)) &&
+        (!('wasteLevel' in request.resource.data) || (request.resource.data.wasteLevel is number && request.resource.data.wasteLevel >= 0 && request.resource.data.wasteLevel <= 100))
+      );
+    }
+
+    // 6. Secure Immutable Administrative Audit Logs
+    match /audit_logs/{logId} {
+      // Accessible ONLY to authorized municipal officers / administrators
+      allow read: if isOfficer();
+      
+      // Officers/Admins can record audit log entries, but once written they are immutable
+      allow create: if isOfficer() && 
+                       request.resource.data.userId is string &&
+                       request.resource.data.action is string &&
+                       request.resource.data.timestamp != null;
+                       
+      // Tamper-proof: Audit logs cannot be updated or deleted by anyone
+      allow update, delete: if false;
+    }
+
+    // 7. Default Deny for any unspecified collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

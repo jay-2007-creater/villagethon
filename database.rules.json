@@ -1,0 +1,96 @@
+{
+  "rules": {
+    "users": {
+      "$userId": {
+        ".read": "auth != null && (auth.uid === $userId || auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true)",
+        ".write": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (auth.uid === $userId && (!data.exists() ? (newData.child('role').val() === 'citizen' || !newData.child('role').exists()) && !newData.child('permissions').exists() && !newData.child('verificationStatus').exists() && !newData.child('wardId').exists() && !newData.child('ward').exists() && !newData.child('staffStatus').exists() && !newData.child('isStaff').exists() && !newData.child('isAdmin').exists() && !newData.child('isOfficer').exists() && !newData.child('municipality').exists() && !newData.child('municipalityId').exists() : (newData.child('role').val() === data.child('role').val() && newData.child('wardId').val() === data.child('wardId').val() && newData.child('ward').val() === data.child('ward').val() && newData.child('permissions').val() === data.child('permissions').val() && newData.child('verificationStatus').val() === data.child('verificationStatus').val() && newData.child('staffStatus').val() === data.child('staffStatus').val() && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('municipality').val() === data.child('municipality').val() && newData.child('municipalityId').val() === data.child('municipalityId').val() && newData.child('isStaff').val() === data.child('isStaff').val() && newData.child('isAdmin').val() === data.child('isAdmin').val() && newData.child('isOfficer').val() === data.child('isOfficer').val()))))"
+      }
+    },
+    "staff_registry": {
+      ".read": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true)",
+      "$staffId": {
+        ".read": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || data.child('userId').val() === auth.uid || data.child('email').val() === auth.token.email || data.child('phone').val() === auth.token.phone_number)",
+        ".write": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (!data.exists() && newData.child('status').val() === 'pending' && !newData.child('approvedAt').exists() && !newData.child('approvedBy').exists() && !newData.child('permissions').exists() && !newData.child('isAdmin').exists() && !newData.child('isOfficer').exists() && (newData.child('userId').val() === auth.uid || newData.child('email').val() === auth.token.email || newData.child('phone').val() === auth.token.phone_number)))"
+      }
+    },
+    "vehicles": {
+      ".read": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true)",
+      "$vehicleId": {
+        ".read": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (auth.token.role === 'driver' && (data.child('currentDriver/id').val() === auth.uid || data.child('vehicleId').val() === auth.token.vehicleId)) || (data.child('wardId').val() === auth.token.wardId))",
+        ".write": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (auth.token.role === 'driver' && (data.child('currentDriver/id').val() === auth.uid || (auth.token.vehicleId === $vehicleId && data.child('vehicleId').val() === auth.token.vehicleId))))",
+        
+        "currentDriver": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.child('id').val() === data.child('id').val() && newData.child('name').val() === data.child('name').val())"
+        },
+        "vehicleId": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "licensePlate": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "wardId": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "assignedWard": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "assignedZone": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "routeId": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "routeName": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "make": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "model": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "capacity": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "type": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (data.exists() && newData.val() === data.val())"
+        },
+        "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+        "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+        "speed": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 160" },
+        "heading": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 360" },
+        "progressPct": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "status": { ".validate": "newData.isString() && newData.val().length <= 50" },
+        "timestamp": { ".validate": "newData.isNumber() || newData.isString()" },
+        "updatedAt": { ".validate": "newData.isNumber() || newData.isString()" },
+        "lastUpdate": { ".validate": "newData.isNumber() || newData.isString()" },
+        "currentLocation": { ".validate": "true" },
+        "battery": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "fuel": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "wasteLevel": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "$other": {
+          ".validate": "auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true"
+        }
+      }
+    },
+    "grievances": {
+      ".read": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true)",
+      "$reportId": {
+        ".read": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || data.child('citizenUid').val() === auth.uid)",
+        ".write": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true || (!data.exists() && newData.child('citizenUid').val() === auth.uid && newData.child('status').val() === 'pending' && !newData.child('assignedSquad').exists() && !newData.child('assignedTo').exists() && !newData.child('resolutionNotes').exists() && !newData.child('resolvedAt').exists() && !newData.child('internalNotes').exists()) || (data.child('citizenUid').val() === auth.uid && newData.child('citizenUid').val() === data.child('citizenUid').val() && newData.child('status').val() === data.child('status').val() && newData.child('assignedSquad').val() === data.child('assignedSquad').val() && newData.child('assignedTo').val() === data.child('assignedTo').val() && newData.child('wardId').val() === data.child('wardId').val() && newData.child('ward').val() === data.child('ward').val() && newData.child('lat').val() === data.child('lat').val() && newData.child('lng').val() === data.child('lng').val() && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('resolvedAt').val() === data.child('resolvedAt').val() && newData.child('resolutionNotes').val() === data.child('resolutionNotes').val() && newData.child('internalNotes').val() === data.child('internalNotes').val()))"
+      }
+    },
+    "advisories": {
+      ".read": true,
+      "$noticeId": {
+        ".write": "auth != null && (auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.role === 'admin' || auth.token.isOfficer === true || auth.token.isAdmin === true)"
+      }
+    },
+    "audit_logs": {
+      ".read": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.isOfficer === true || auth.token.isAdmin === true)",
+      "$logId": {
+        ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'officer' || auth.token.role === 'municipality' || auth.token.isOfficer === true || auth.token.isAdmin === true) && !data.exists()"
+      }
+    }
+  }
+}

@@ -16,7 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Leaflet CSS for Interactive Civic & Route Maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <link rel="stylesheet" href="css/style.css?v=5.0">
+  <link rel="stylesheet" href="css/style.css?v=6.0">
 </head>
 <body class="production-app-mode">
 
@@ -29,8 +29,8 @@
         🚚
       </div>
       <div class="geofence-content">
-        <div class="geofence-title">🔔 Doorstep Waste Collection Alert</div>
-        <div class="geofence-subtitle" id="geofence-banner-desc">Vehicle is within 250m (~2 mins away). Keep waste ready!</div>
+        <div class="geofence-title" data-i18n="doorstep_alert_title">🔔 Doorstep Waste Collection Alert</div>
+        <div class="geofence-subtitle" id="geofence-banner-desc" data-i18n="doorstep_alert_desc">Vehicle is within 250m (~2 mins away). Keep waste ready!</div>
       </div>
       <button type="button" class="geofence-dismiss-btn" onclick="CityAssist.dismissGeofenceAlert()">✕</button>
     </div>
@@ -43,40 +43,57 @@
             <div class="auth-screen-container">
               <!-- Auth Hero Banner -->
               <div class="auth-hero-banner">
+                <!-- Top Language Switcher Bar -->
+                <div style="display:flex; justify-content:flex-end; width:100%; margin-bottom:6px;">
+                  <button type="button" class="auth-lang-chip" onclick="I18nEngine.openLanguageModal()" title="Change Language">
+                    <span style="font-size:0.95rem;">🌐</span>
+                    <span id="auth-current-lang-text">English</span>
+                    <span style="font-size:0.6rem; opacity:0.8;">▼</span>
+                  </button>
+                </div>
+
                 <div class="auth-logo-badge">
                   <img src="assets/logo.png?v=7.0" alt="CityAssist Logo" class="auth-brand-logo-img">
                 </div>
-                <h1 class="auth-title">CityAssist</h1>
-                <p class="auth-subtitle">Smart Civic Waste & Live Fleet Operations</p>
-                <div class="auth-city-tag">📍 Talegaon Dabhade Municipal Council</div>
+                <h1 class="auth-title" data-i18n="auth_title">CityAssist</h1>
+                <p class="auth-subtitle" data-i18n="auth_subtitle">Smart Civic Waste & Live Fleet Operations</p>
+                <div class="auth-city-tag" data-i18n="auth_muni_tag">📍 Talegaon Dabhade Municipal Council</div>
               </div>
 
               <div class="auth-content-card">
                 <!-- Role Selection -->
                 <div class="auth-role-select-box">
-                  <label class="auth-field-label">Select Your Role</label>
+                  <label class="auth-field-label" data-i18n="auth_select_role">Select Your Role</label>
                   <div class="auth-role-tabs">
                     <button type="button" class="auth-role-tab active" id="auth-role-btn-citizen" onclick="AuthEngine.switchAuthRole('citizen')">
                       <span class="role-emoji">👤</span>
-                      <span class="role-text">Resident</span>
+                      <span class="role-text" data-i18n="role_resident">Resident</span>
                     </button>
                     <button type="button" class="auth-role-tab" id="auth-role-btn-driver" onclick="AuthEngine.switchAuthRole('driver')">
                       <span class="role-emoji">🚚</span>
-                      <span class="role-text">Driver</span>
+                      <span class="role-text" data-i18n="role_driver">Driver</span>
                     </button>
                     <button type="button" class="auth-role-tab" id="auth-role-btn-officer" onclick="AuthEngine.switchAuthRole('officer')">
                       <span class="role-emoji">🏛️</span>
-                      <span class="role-text">Officer</span>
+                      <span class="role-text" data-i18n="role_officer">Officer</span>
                     </button>
                   </div>
                 </div>
 
+                <!-- Staff Role Verification Notice (Dynamically displayed when Driver or Officer is chosen) -->
+                <div id="auth-staff-role-notice" style="display:none; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:12px; padding:10px 12px; font-size:0.75rem; color:#1E40AF; font-weight:700; margin-bottom:12px; line-height:1.4;">
+                  🛡️ Requires authorized credentials approved by the Municipality.
+                </div>
+
+                <!-- Invisible Firebase reCAPTCHA Container -->
+                <div id="recaptcha-container" style="display:none;"></div>
+
                 <!-- Auth Mode Tabs (Phone OTP / Email / Google) -->
                 <div class="auth-method-switcher">
-                  <button type="button" class="auth-method-btn active" id="auth-method-tab-otp" onclick="AuthEngine.switchAuthTab('otp')">
+                  <button type="button" class="auth-method-btn active" id="auth-method-tab-otp" onclick="AuthEngine.switchAuthTab('otp')" data-i18n="auth_tab_otp">
                     📱 Mobile OTP
                   </button>
-                  <button type="button" class="auth-method-btn" id="auth-method-tab-email" onclick="AuthEngine.switchAuthTab('email')">
+                  <button type="button" class="auth-method-btn" id="auth-method-tab-email" onclick="AuthEngine.switchAuthTab('email')" data-i18n="auth_tab_email">
                     📧 Email / Pass
                   </button>
                 </div>
@@ -84,7 +101,7 @@
                 <!-- ═══════ 1. MOBILE OTP SECTION ═══════ -->
                 <div id="auth-sec-otp" class="auth-method-section">
                   <div class="auth-form-group">
-                    <label class="auth-field-label" for="auth-phone-input">Mobile Number</label>
+                    <label class="auth-field-label" for="auth-phone-input" data-i18n="auth_label_mobile">Mobile Number</label>
                     <div class="auth-phone-input-row">
                       <span class="auth-country-code">🇮🇳 +91</span>
                       <input type="tel" id="auth-phone-input" class="auth-text-input" placeholder="98765 43210" maxlength="10" value="">
@@ -93,8 +110,8 @@
 
                   <!-- Name for Mobile User (Optional) -->
                   <div class="auth-form-group" id="auth-phone-name-group" style="margin-top:8px;">
-                    <label class="auth-field-label" for="auth-phone-name">Full Name (Optional)</label>
-                    <input type="text" id="auth-phone-name" class="auth-text-input" placeholder="e.g. Siddhant Ramteke" value="Siddhant Ramteke">
+                    <label class="auth-field-label" for="auth-phone-name" data-i18n="auth_label_fullname">Full Name (Optional)</label>
+                    <input type="text" id="auth-phone-name" class="auth-text-input" placeholder="e.g. Siddhant Ramteke">
                   </div>
 
                   <!-- OTP Digits Box (Auto revealed after send OTP) -->
@@ -117,7 +134,7 @@
                     </div>
                   </div>
 
-                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()" style="margin-top:12px;">
+                  <button type="button" id="auth-otp-primary-btn" class="auth-primary-submit-btn" onclick="AuthEngine.handleOtpPrimaryAction()" style="margin-top:12px;" data-i18n="auth_btn_send_otp">
                     Send Verification OTP ➜
                   </button>
                 </div>
@@ -127,7 +144,7 @@
                   <!-- Sign In vs Sign Up Toggle -->
                   <div class="auth-sub-toggle">
                     <button type="button" class="sub-toggle-btn active" id="auth-email-mode-login" onclick="AuthEngine.switchEmailAuthMode('login')">Sign In</button>
-                    <button type="button" class="sub-toggle-btn" id="auth-email-mode-signup" onclick="AuthEngine.switchEmailAuthMode('signup')">Create Account</button>
+                    <button type="button" class="sub-toggle-btn" id="auth-email-mode-signup" onclick="AuthEngine.switchEmailAuthMode('signup')">Create Citizen Account</button>
                   </div>
 
                   <!-- Signup Name Field (Shown only on signup mode) -->
@@ -139,13 +156,13 @@
                   <!-- Email Address -->
                   <div class="auth-form-group">
                     <label class="auth-field-label" for="auth-email-val">Email Address</label>
-                    <input type="email" id="auth-email-val" class="auth-text-input" placeholder="name@gmail.com" value="siddhantramteke06@gmail.com">
+                    <input type="email" id="auth-email-val" class="auth-text-input" placeholder="citizen@gmail.com">
                   </div>
 
                   <!-- Password -->
                   <div class="auth-form-group">
                     <label class="auth-field-label" for="auth-pass-val">Password</label>
-                    <input type="password" id="auth-pass-val" class="auth-text-input" placeholder="••••••••" value="cityassist2026">
+                    <input type="password" id="auth-pass-val" class="auth-text-input" placeholder="••••••••">
                   </div>
 
                   <!-- Ward / Locality (Signup only) -->
@@ -166,7 +183,7 @@
 
                 <!-- ═══════ 3. GOOGLE SIGN-IN BUTTON ═══════ -->
                 <div class="auth-divider">
-                  <span>OR CONTINUE WITH</span>
+                  <span data-i18n="auth_or_continue">OR CONTINUE WITH</span>
                 </div>
 
                 <button type="button" class="auth-google-btn" onclick="AuthEngine.triggerGoogleSignIn()" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; background:#FFFFFF; border:1.5px solid #CBD5E1; color:#1E293B; font-weight:800; font-size:0.92rem; padding:12px; border-radius:14px; margin-bottom:14px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
@@ -176,31 +193,18 @@
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                   </svg>
-                  <span>Continue with Google</span>
+                  <span data-i18n="auth_btn_google">Continue with Google</span>
                 </button>
 
-                <!-- ═══════ 4. ONE-TAP DEMO TEST ACCOUNTS ═══════ -->
-                <div class="auth-demo-section">
-                  <div class="auth-demo-header">
-                    <span style="font-size:0.75rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">⚡ Instant 1-Tap Demo Access</span>
-                  </div>
-                  <div class="auth-demo-chips">
-                    <button type="button" class="demo-chip-btn" onclick="AuthEngine.quickLoginDemo('citizen')">
-                      <span>👤 Resident (Siddhant)</span>
-                    </button>
-                    <button type="button" class="demo-chip-btn" onclick="AuthEngine.quickLoginDemo('driver')">
-                      <span>🚚 Driver (Ramesh)</span>
-                    </button>
-                    <button type="button" class="demo-chip-btn" onclick="AuthEngine.quickLoginDemo('officer')">
-                      <span>🏛️ Officer (Prakash)</span>
-                    </button>
-                  </div>
+                <!-- Production Security Information Badge -->
+                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px; font-size:0.75rem; color:#64748B; line-height:1.4; display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                  <span style="font-size:1.1rem;">🏛️</span>
+                  <span><strong>Talegaon Municipal Portal:</strong> Drivers and Municipal Officers are verified against official municipality records. Citizens can register securely.</span>
                 </div>
 
                 <!-- Footer Terms -->
-                <p class="auth-footer-terms">
-                  By continuing, you agree to PMC Civic Digital Terms & Privacy Policy.<br>
-                  Talegaon Dabhade Municipal Swachh Bharat Initiative.
+                <p class="auth-footer-terms" data-i18n="auth_terms">
+                  By continuing, you agree to Talegaon Dabhade Municipal Council Civic Terms & Privacy Policy.
                 </p>
               </div>
             </div>
@@ -437,6 +441,23 @@
                   </div>
                 </div>
 
+                <!-- App Language Selector Row -->
+                <div class="menu-item-row" onclick="I18nEngine.openLanguageModal()" style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:14px; margin:4px 0;">
+                  <div class="menu-item-left">
+                    <div class="menu-icon" style="background:#0F7943; color:#FFF; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
+                      🌐
+                    </div>
+                    <div>
+                      <span class="menu-item-label" data-i18n="profile_app_lang" style="font-weight:800; color:#065F46;">App Language / भाषा</span>
+                      <div style="font-size:0.72rem; color:#059669;" id="profile-lang-selected-desc">English • मराठी • हिन्दी</div>
+                    </div>
+                  </div>
+                  <div class="menu-item-right">
+                    <span style="background:#0F7943; color:#FFF; font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:8px;" id="profile-lang-pill">English</span>
+                    <svg class="chevron-right" viewBox="0 0 24 24" fill="none" stroke="#0F7943" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                  </div>
+                </div>
+
                 <div class="menu-item-row" onclick="CityAssist.showHelpModal()">
                   <div class="menu-item-left">
                     <div class="menu-icon help-icon">
@@ -446,7 +467,7 @@
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                       </svg>
                     </div>
-                    <span class="menu-item-label">Help & Support</span>
+                    <span class="menu-item-label" data-i18n="profile_help_support">Help & Support</span>
                   </div>
                   <div class="menu-item-right">
                     <svg class="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
@@ -454,57 +475,7 @@
                 </div>
               </div>
 
-              <!-- Quick Navigation & Mode Switchers -->
-              <div style="margin-top:16px;">
-                <div style="font-size:0.8rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
-                  Quick Navigation & Modes
-                </div>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                  <div class="menu-item-row" onclick="CityAssist.navigateTo('home')" style="cursor:pointer; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px;">
-                    <div class="menu-item-left" style="display:flex; align-items:center; gap:10px;">
-                      <span style="font-size:1.2rem;">🏡</span>
-                      <div>
-                        <strong style="font-size:0.9rem; color:#0F172A; display:block;">Citizen Home Dashboard</strong>
-                        <span style="font-size:0.75rem; color:#64748B;">Overview, waste status & quick actions</span>
-                      </div>
-                    </div>
-                    <span style="color:#0F7943; font-weight:800; font-size:0.9rem;">➜</span>
-                  </div>
 
-                  <div class="menu-item-row" onclick="CityAssist.navigateTo('my-requests')" style="cursor:pointer; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px;">
-                    <div class="menu-item-left" style="display:flex; align-items:center; gap:10px;">
-                      <span style="font-size:1.2rem;">📋</span>
-                      <div>
-                        <strong style="font-size:0.9rem; color:#0F172A; display:block;">My Service Requests & Issues</strong>
-                        <span style="font-size:0.75rem; color:#64748B;">Track active tickets & squad progress</span>
-                      </div>
-                    </div>
-                    <span style="color:#0F7943; font-weight:800; font-size:0.9rem;">➜</span>
-                  </div>
-
-                  <div class="menu-item-row" onclick="CityAssist.navigateTo('driver')" style="cursor:pointer; background:#EFF6FF; border:1.5px solid #BFDBFE; border-radius:12px; padding:12px 14px;">
-                    <div class="menu-item-left" style="display:flex; align-items:center; gap:10px;">
-                      <span style="font-size:1.2rem;">🚚</span>
-                      <div>
-                        <strong style="font-size:0.9rem; color:#1E40AF; display:block;">Driver Live Tracking Mode</strong>
-                        <span style="font-size:0.75rem; color:#3B82F6;">Simulate collection route & live telemetry</span>
-                      </div>
-                    </div>
-                    <span style="color:#1D4ED8; font-weight:800; font-size:0.9rem;">➜</span>
-                  </div>
-
-                  <div class="menu-item-row" onclick="CityAssist.navigateTo('municipality')" style="cursor:pointer; background:#F0FDF4; border:1.5px solid #BBF7D0; border-radius:12px; padding:12px 14px;">
-                    <div class="menu-item-left" style="display:flex; align-items:center; gap:10px;">
-                      <span style="font-size:1.2rem;">🏛️</span>
-                      <div>
-                        <strong style="font-size:0.9rem; color:#166534; display:block;">PMC Command Center (Admin)</strong>
-                        <span style="font-size:0.75rem; color:#15803D;">Fleet telemetry, triage queue & analytics</span>
-                      </div>
-                    </div>
-                    <span style="color:#15803D; font-weight:800; font-size:0.9rem;">➜</span>
-                  </div>
-                </div>
-              </div>
 
               <!-- ═══════ ACCOUNT & LOGOUT ACTIONS ═══════ -->
               <div style="margin-top:16px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;">
@@ -545,8 +516,28 @@
             </div>
 
             <div class="screen-content garbage-tracking-page-content">
+              <!-- ── CITIZEN ASSIGNED VEHICLE & INACTIVE STANDBY BANNER ── -->
+              <div id="citizen-vehicle-inactive-banner" style="display:none; background:linear-gradient(135deg,#FFFBEB,#FEF3C7); border:1.5px solid #FCD34D; color:#92400E; border-radius:14px; padding:12px 14px; margin-bottom:12px; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(245,158,11,0.12);">
+                <div style="font-size:1.5rem; line-height:1;">⏳</div>
+                <div style="flex:1;">
+                  <div style="font-weight:800; font-size:0.86rem; color:#78350F;">Garbage vehicle is currently not active in your area.</div>
+                  <div id="inactive-schedule-text" style="font-size:0.75rem; color:#92400E; margin-top:2px;">📍 Ward 2 (Samta Colony & Shivaji Nagar) • Scheduled Shift: 07:00 AM – 12:00 PM</div>
+                </div>
+              </div>
+
+              <!-- Citizen Assigned Ward & Vehicle Header Pill -->
+              <div style="display:flex; align-items:center; justify-content:space-between; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:8px 12px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:0.85rem;">📍</span>
+                  <span id="citizen-active-ward-label" style="font-size:0.78rem; font-weight:800; color:#1E293B;">Ward 2: Shivaji Nagar</span>
+                </div>
+                <div id="gt-assigned-vehicle-badge" style="background:#F0FDF4; border:1px solid #DCFCE7; color:#15803D; font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:8px;">
+                  🚛 Collection Van • Ward 2
+                </div>
+              </div>
+
               <!-- ── OFFLINE FALLBACK BANNER (shown when internet drops) ── -->
-              <div id="offline-fallback-banner" style="display:none; background:linear-gradient(135deg,#F59E0B,#D97706); color:#FFF; border-radius:12px; padding:10px 14px; margin-bottom:10px; display:none; align-items:center; gap:10px;">
+              <div id="offline-fallback-banner" style="display:none; background:linear-gradient(135deg,#F59E0B,#D97706); color:#FFF; border-radius:12px; padding:10px 14px; margin-bottom:10px; align-items:center; gap:10px;">
                 <span style="font-size:1.3rem;">📵</span>
                 <div style="flex:1;">
                   <div style="font-weight:900; font-size:0.88rem;">Offline — Showing Last Known Location</div>
@@ -1046,42 +1037,78 @@
             <div class="screen-content emergency-page-content">
               <h2 class="section-headline">What is your emergency?</h2>
 
-              <!-- 4 Urgent Types Selector Grid -->
+              <!-- Direct Hotline Quick Dial Bar -->
+              <div class="emergency-quick-dial-strip">
+                <span class="quick-dial-label">⚡ Direct Emergency Helplines</span>
+                <div class="quick-dial-chips">
+                  <a href="tel:101" class="quick-dial-chip dial-fire" onclick="CityAssist.showToast('📞 Dialing Fire & Rescue (101)...')">🚒 101 Fire</a>
+                  <a href="tel:108" class="quick-dial-chip dial-med" onclick="CityAssist.showToast('📞 Dialing Ambulance (108)...')">🚑 108 Ambulance</a>
+                  <a href="tel:112" class="quick-dial-chip dial-police" onclick="CityAssist.showToast('📞 Dialing Police (112)...')">👮 112 Police</a>
+                  <a href="tel:1912" class="quick-dial-chip dial-elec" onclick="CityAssist.showToast('📞 Dialing Power Squad (1912)...')">⚡ 1912 Power</a>
+                  <a href="tel:1077" class="quick-dial-chip dial-disaster" onclick="CityAssist.showToast('📞 Dialing Disaster Relief (1077)...')">🌊 1077 Disaster</a>
+                </div>
+              </div>
+
+              <!-- 5 Urgent Emergency Types Selector Grid -->
               <div class="emergency-grid-selector">
-                <div class="emergency-select-card selected" data-type="water" onclick="CityAssist.selectEmergency(this, 'Water Leakage')">
-                  <div class="emergency-circle-icon icon-water-bg">
-                    <svg viewBox="0 0 24 24" fill="#1877F2">
-                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                <!-- 1. Fire & Rescue -->
+                <div class="emergency-select-card" data-type="fire" onclick="CityAssist.selectEmergency(this, 'Fire & Rescue')">
+                  <div class="emergency-circle-icon icon-fire-bg">
+                    <svg viewBox="0 0 24 24" fill="#DC2626">
+                      <path d="M12 2c-.8 2.2-2.5 4.1-3.7 6.1C7.1 10.2 6.5 12 6.5 14c0 3 2.5 5.5 5.5 5.5s5.5-2.5 5.5-5.5c0-1.8-.7-3.4-1.8-4.8C14.5 7.4 13.2 5 12 2zm0 15c-1.7 0-3-1.3-3-3 0-1 .4-1.9 1.1-2.5.3 1.2 1.3 2 2.5 2 .2 0 .5 0 .7-.1-.1 1.9-1.3 3.6-1.3 3.6z"/>
                     </svg>
                   </div>
-                  <span class="emergency-type-title">Water<br>Leakage</span>
+                  <span class="emergency-type-title">Fire &<br>Rescue</span>
+                  <span class="emergency-card-badge badge-fire">101 / 112</span>
                 </div>
 
-                <div class="emergency-select-card" data-type="electric" onclick="CityAssist.selectEmergency(this, 'Electrical Issue')">
+                <!-- 2. Medical Emergency (Selected by default) -->
+                <div class="emergency-select-card selected" data-type="medical" onclick="CityAssist.selectEmergency(this, 'Medical Emergency')">
+                  <div class="emergency-circle-icon icon-medical-bg">
+                    <svg viewBox="0 0 24 24" fill="#E11D48">
+                      <path d="M19 10.5h-4.5V6a1.5 1.5 0 0 0-3 0v4.5H7a1.5 1.5 0 0 0 0 3h4.5V18a1.5 1.5 0 0 0 3 0v-4.5H19a1.5 1.5 0 0 0 0-3z"/>
+                    </svg>
+                  </div>
+                  <span class="emergency-type-title">Medical<br>Emergency</span>
+                  <span class="emergency-card-badge badge-med">108 / 102</span>
+                </div>
+
+                <!-- 3. Police Emergency -->
+                <div class="emergency-select-card" data-type="police" onclick="CityAssist.selectEmergency(this, 'Police Emergency')">
+                  <div class="emergency-circle-icon icon-police-bg">
+                    <svg viewBox="0 0 24 24" fill="#2563EB">
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                  </div>
+                  <span class="emergency-type-title">Police<br>Emergency</span>
+                  <span class="emergency-card-badge badge-police">112 / 100</span>
+                </div>
+
+                <!-- 4. Electrical Emergency -->
+                <div class="emergency-select-card" data-type="electric" onclick="CityAssist.selectEmergency(this, 'Electrical Emergency')">
                   <div class="emergency-circle-icon icon-electric-bg">
-                    <svg viewBox="0 0 24 24" fill="#F59E0B">
+                    <svg viewBox="0 0 24 24" fill="#D97706">
                       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                     </svg>
                   </div>
-                  <span class="emergency-type-title">Electrical<br>Issue</span>
+                  <span class="emergency-type-title">Electrical<br>Emergency</span>
+                  <span class="emergency-card-badge badge-elec">1912</span>
                 </div>
 
-                <div class="emergency-select-card" data-type="gas" onclick="CityAssist.selectEmergency(this, 'Gas Leak (Suspected)')">
-                  <div class="emergency-circle-icon icon-gas-bg">
-                    <svg viewBox="0 0 24 24" fill="#EF4444">
-                      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+                <!-- 5. Flood / Disaster -->
+                <div class="emergency-select-card emergency-card-full" data-type="flood" onclick="CityAssist.selectEmergency(this, 'Flood / Disaster')">
+                  <div class="emergency-circle-icon icon-flood-bg">
+                    <svg viewBox="0 0 24 24" fill="#0284C7">
+                      <path d="M12 3a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9s9-4.03 9-9a9 9 0 0 0-9-9zm0 4a5 5 0 0 1 5 5c0 2.76-2.24 5-5 5s-5-2.24-5-5a5 5 0 0 1 5-5zm-7.9 5a7.9 7.9 0 0 0 1.5 4.5l2.4-2.4A4.9 4.9 0 0 1 7.1 12H4.1zm11.9 2.1l2.4 2.4a7.9 7.9 0 0 0 1.5-4.5h-3c0 .8-.3 1.5-.9 2.1zM12 7.1c.8 0 1.5.3 2.1.9l2.4-2.4A7.9 7.9 0 0 0 12 4.1v3zm-2.1.9c.6-.6 1.3-.9 2.1-.9V4.1a7.9 7.9 0 0 0-4.5 1.5l2.4 2.4z"/>
                     </svg>
                   </div>
-                  <span class="emergency-type-title">Gas Leak<br>(Suspected)</span>
-                </div>
-
-                <div class="emergency-select-card" data-type="repair" onclick="CityAssist.selectEmergency(this, 'Other Urgent Repair')">
-                  <div class="emergency-circle-icon icon-repair-bg">
-                    <svg viewBox="0 0 24 24" fill="#8B5CF6">
-                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                    </svg>
+                  <div class="emergency-card-full-info">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span class="emergency-type-title" style="margin:0;">Flood / Disaster</span>
+                      <span class="emergency-card-badge badge-disaster">1077 NDRF</span>
+                    </div>
+                    <span style="font-size:0.75rem; color:#64748B; display:block; margin-top:2px;">Waterlogging, flood rescue, storm damages & disaster relief</span>
                   </div>
-                  <span class="emergency-type-title">Other Urgent<br>Repair</span>
                 </div>
               </div>
 
@@ -1150,7 +1177,13 @@
             </div>
 
             <div class="screen-content report-page-content">
-              <h2 class="section-headline">What issue do you want to report?</h2>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h2 class="section-headline" style="margin-bottom:0;">What issue do you want to report?</h2>
+                <div class="firebase-live-badge" style="display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:12px; border:1px solid #86EFAC; background:#F0FDF4;">
+                  <span style="display:inline-block; width:7px; height:7px; background:#22C55E; border-radius:50%; box-shadow:0 0 6px #22C55E;"></span>
+                  <span style="color:#15803D;">Firebase Live</span>
+                </div>
+              </div>
 
               <!-- 9 Issue Category Tiles (Including Potholes & Infra) -->
               <div class="issue-categories-grid">
@@ -1378,121 +1411,294 @@
             </div>
           </section>
 
-          <!-- 1.7 SERVICES SCREEN (Exact to Screenshot) -->
+          <!-- 1.7 SERVICES SCREEN (Consistent, Appealing & Interactive Municipal Services) -->
           <section class="screen-view" id="screen-services">
-            <div class="screen-content services-page-content">
-              <!-- Services Header -->
-              <div class="services-header-block">
-                <h1 class="services-main-title">Services</h1>
-                <div class="services-location-pill" onclick="CityAssist.editLocation()">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="location-pin-blue">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
+            <!-- Top App Bar Consistent with other screens -->
+            <div class="screen-header green-theme services-header-bar" style="position:relative; display:flex; align-items:center; justify-content:space-between; padding:0 16px;">
+              <div class="header-left-slot" style="width:76px; display:flex; align-items:center;">
+                <button class="icon-action-btn dark-icon" onclick="CityAssist.openDrawer()" title="Menu" style="color:#FFF;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
                   </svg>
-                  <span id="services-location-text">Shivaji Nagar, Pune</span>
+                </button>
+              </div>
+              <h1 class="header-title" style="text-align:center; font-size:1.25rem; font-weight:800; margin:0; flex:1;" data-i18n="nav_services">Municipal Services</h1>
+              <div class="header-right-actions" style="width:76px; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
+                <button type="button" class="lang-nav-chip" onclick="I18nEngine.openLanguageModal()" title="Change Language / भाषा" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.3); color:#FFF; padding:4px 8px; border-radius:12px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:3px;">
+                  <span style="font-size:0.85rem;">🌐</span>
+                  <span id="services-lang-pill-text">EN</span>
+                </button>
+                <button class="icon-action-btn notif-btn" onclick="CityAssist.showNotificationsModal()" title="Notifications" style="color:#FFF;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                  <span class="notification-badge-dot">1</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="screen-content services-page-content" style="padding-top:14px; padding-bottom:90px;">
+              
+              <!-- 1. Top Municipal Header Card -->
+              <div class="muni-hero-banner-card">
+                <div class="muni-hero-banner-left">
+                  <div class="muni-gov-icon-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" width="22" height="22">
+                      <path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 3l10 7H2l10-7z"></path>
+                    </svg>
+                  </div>
+                  <div class="muni-hero-banner-text">
+                    <div class="muni-council-tag">📍 Talegaon Dabhade Municipal Council</div>
+                    <h2>Civic Services &amp; Squads</h2>
+                    <p>Report issues, track progress &amp; connect with rapid response squads.</p>
+                  </div>
                 </div>
               </div>
 
-              <!-- Search Bar -->
-              <div class="services-search-container">
-                <input type="text" id="services-search-input" class="services-search-input" placeholder="Search for a service..." oninput="ServicesEngine.handleSearch(this.value)">
-                <div class="services-search-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                </div>
+              <!-- 2. Search Bar -->
+              <div class="muni-search-box-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" width="18" height="18">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="services-search-input" placeholder="Search services, repair units, or report..." oninput="ServicesEngine.handleSearch(this.value)">
+                <button type="button" class="muni-search-clear-btn" onclick="ServicesEngine.clearSearch()" title="Clear Search">✕</button>
               </div>
 
-              <!-- Popular Services Section -->
-              <div class="popular-services-section">
-                <h3 class="section-title-sm">Popular Services</h3>
+              <!-- 3. Category Filter Chips (Horizontal Scroll) -->
+              <div class="muni-category-chips-row">
+                <button type="button" class="muni-chip-item active" data-category="all" onclick="ServicesEngine.filterCategory('all', this)">
+                  <span>🏛️</span> <span>All Services</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="waste" onclick="ServicesEngine.filterCategory('waste', this)">
+                  <span>🗑️</span> <span>Waste</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="water" onclick="ServicesEngine.filterCategory('water', this)">
+                  <span>💧</span> <span>Water</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="roads" onclick="ServicesEngine.filterCategory('roads', this)">
+                  <span>🛣️</span> <span>Roads</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="streetlights" onclick="ServicesEngine.filterCategory('streetlights', this)">
+                  <span>💡</span> <span>Streetlights</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="drainage" onclick="ServicesEngine.filterCategory('drainage', this)">
+                  <span>🚰</span> <span>Drainage</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="cleanliness" onclick="ServicesEngine.filterCategory('cleanliness', this)">
+                  <span>🧹</span> <span>Cleanliness</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="trees" onclick="ServicesEngine.filterCategory('trees', this)">
+                  <span>🌳</span> <span>Trees</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="infra" onclick="ServicesEngine.filterCategory('infra', this)">
+                  <span>🚏</span> <span>Infrastructure</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="health" onclick="ServicesEngine.filterCategory('health', this)">
+                  <span>🏥</span> <span>Health &amp; Fogging</span>
+                </button>
+                <button type="button" class="muni-chip-item" data-category="other" onclick="ServicesEngine.filterCategory('other', this)">
+                  <span>📋</span> <span>Other Civic</span>
+                </button>
+              </div>
+
+              <!-- Section Title with Quick Stats -->
+              <div class="muni-section-header-row">
+                <div class="muni-section-title-wrap">
+                  <h3 class="muni-section-title">Municipal Services</h3>
+                  <span class="muni-section-badge">10 Active Divisions</span>
+                </div>
+                <button type="button" class="muni-view-all-link" onclick="ServicesEngine.showAllCategories()">
+                  View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+
+              <!-- 4. 10 Core Civic Services (3-Column 3D Illustrated Grid - 3 Services Per Row) -->
+              <div class="muni-services-grid-3col">
                 
-                <div class="popular-services-grid">
-                  <!-- 1. Plumber (Soft Blue) -->
-                  <div class="service-cat-tile bg-cat-blue" onclick="ServicesEngine.filterCategory('plumber', this)">
-                    <div class="cat-tile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 4l7 7m0 0l-3 3m3-3l3-3m-3 3l-4 4m8-4l-4 4m6-2l-2 2"></path>
-                        <circle cx="17" cy="7" r="1.5" fill="#2563EB"/>
-                        <circle cx="19" cy="11" r="1.5" fill="#2563EB"/>
-                        <circle cx="15" cy="13" r="1.5" fill="#2563EB"/>
-                      </svg>
-                    </div>
-                    <span class="cat-tile-label">Plumber</span>
+                <!-- 1. Waste & Garbage (Mint Green) -->
+                <div class="muni-service-card muni-card-waste" data-category="waste" onclick="ServicesEngine.openCardActionSheet('waste')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_waste_garbage.png" class="muni-card-3d-img" alt="Waste & Garbage">
                   </div>
-
-                  <!-- 2. Electrician (Soft Yellow) -->
-                  <div class="service-cat-tile bg-cat-yellow" onclick="ServicesEngine.filterCategory('electrician', this)">
-                    <div class="cat-tile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                      </svg>
-                    </div>
-                    <span class="cat-tile-label">Electrician</span>
-                  </div>
-
-                  <!-- 3. Carpenter (Soft Peach) -->
-                  <div class="service-cat-tile bg-cat-peach" onclick="ServicesEngine.filterCategory('carpenter', this)">
-                    <div class="cat-tile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 12l-8.5 8.5a2.12 2.12 0 1 1-3-3L12 9"></path>
-                        <path d="M17.64 4.36a3 3 0 0 0-4.24 0L12 5.76l4.24 4.24 1.4-1.4a3 3 0 0 0 0-4.24z"></path>
-                      </svg>
-                    </div>
-                    <span class="cat-tile-label">Carpenter</span>
-                  </div>
-
-                  <!-- 4. Painter (Soft Mint) -->
-                  <div class="service-cat-tile bg-cat-green" onclick="ServicesEngine.filterCategory('painter', this)">
-                    <div class="cat-tile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 11V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h12"></path>
-                        <path d="M16 11v6a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-6"></path>
-                      </svg>
-                    </div>
-                    <span class="cat-tile-label">Painter</span>
-                  </div>
-
-                  <!-- 5. AC Repair (Soft Cyan) -->
-                  <div class="service-cat-tile bg-cat-cyan" onclick="ServicesEngine.filterCategory('ac_repair', this)">
-                    <div class="cat-tile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="2" x2="12" y2="22"></line>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-                        <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"></line>
-                      </svg>
-                    </div>
-                    <span class="cat-tile-label">AC Repair</span>
-                  </div>
-
-                  <!-- 6. More Services (Soft Slate) -->
-                  <div class="service-cat-tile bg-cat-slate" onclick="ServicesEngine.showAllCategories()">
-                    <div class="cat-tile-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
-                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
-                        <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
-                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
-                      </svg>
-                    </div>
-                    <span class="cat-tile-label">More Services</span>
+                  <h4 class="muni-card-title">Waste &amp; Garbage</h4>
+                  <p class="muni-card-desc">Missed pickup, bins, dumping</p>
+                  <div class="muni-arrow-circle muni-arrow-waste">
+                    <span>➜</span>
                   </div>
                 </div>
+
+                <!-- 2. Water Supply (Sky Blue) -->
+                <div class="muni-service-card muni-card-water" data-category="water" onclick="ServicesEngine.openCardActionSheet('water')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_water_supply.png" class="muni-card-3d-img" alt="Water Supply">
+                  </div>
+                  <h4 class="muni-card-title">Water Supply</h4>
+                  <p class="muni-card-desc">Leakage, no supply, dirty water</p>
+                  <div class="muni-arrow-circle muni-arrow-water">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 3. Roads & Potholes (Peach / Orange) -->
+                <div class="muni-service-card muni-card-roads" data-category="roads" onclick="ServicesEngine.openCardActionSheet('roads')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_roads_potholes.png" class="muni-card-3d-img" alt="Roads & Potholes">
+                  </div>
+                  <h4 class="muni-card-title">Roads &amp; Potholes</h4>
+                  <p class="muni-card-desc">Potholes, damaged roads</p>
+                  <div class="muni-arrow-circle muni-arrow-roads">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 4. Streetlights (Lavender Purple) -->
+                <div class="muni-service-card muni-card-lights" data-category="streetlights" onclick="ServicesEngine.openCardActionSheet('streetlights')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_streetlights.png" class="muni-card-3d-img" alt="Streetlights">
+                  </div>
+                  <h4 class="muni-card-title">Streetlights</h4>
+                  <p class="muni-card-desc">Not working, dark poles</p>
+                  <div class="muni-arrow-circle muni-arrow-lights">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 5. Drainage & Sewerage (Mint / Teal) -->
+                <div class="muni-service-card muni-card-drainage" data-category="drainage" onclick="ServicesEngine.openCardActionSheet('drainage')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_drainage_sewerage.png" class="muni-card-3d-img" alt="Drainage & Sewerage">
+                  </div>
+                  <h4 class="muni-card-title">Drainage &amp; Sewer</h4>
+                  <p class="muni-card-desc">Blocked drains, manholes</p>
+                  <div class="muni-arrow-circle muni-arrow-drainage">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 6. Public Cleanliness (Rose / Pink) -->
+                <div class="muni-service-card muni-card-clean" data-category="cleanliness" onclick="ServicesEngine.openCardActionSheet('cleanliness')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_public_cleanliness.png" class="muni-card-3d-img" alt="Public Cleanliness">
+                  </div>
+                  <h4 class="muni-card-title">Cleanliness</h4>
+                  <p class="muni-card-desc">Dirty areas, sweeping</p>
+                  <div class="muni-arrow-circle muni-arrow-clean">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 7. Trees & Green Spaces (Lime / Green) -->
+                <div class="muni-service-card muni-card-trees" data-category="trees" onclick="ServicesEngine.openCardActionSheet('trees')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_trees_greenery.png" class="muni-card-3d-img" alt="Trees & Green Spaces">
+                  </div>
+                  <h4 class="muni-card-title">Trees &amp; Parks</h4>
+                  <p class="muni-card-desc">Fallen trees, gardens</p>
+                  <div class="muni-arrow-circle muni-arrow-trees">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 8. Public Infrastructure (Soft Blue) -->
+                <div class="muni-service-card muni-card-infra" data-category="infra" onclick="ServicesEngine.openCardActionSheet('infra')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_public_infra.png" class="muni-card-3d-img" alt="Public Infrastructure">
+                  </div>
+                  <h4 class="muni-card-title">Infrastructure</h4>
+                  <p class="muni-card-desc">Bus stops, footpaths</p>
+                  <div class="muni-arrow-circle muni-arrow-infra">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 9. Public Health & Sanitation (Peach / Coral) -->
+                <div class="muni-service-card muni-card-health" data-category="health" onclick="ServicesEngine.openCardActionSheet('health')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_public_health.png" class="muni-card-3d-img" alt="Public Health & Sanitation">
+                  </div>
+                  <h4 class="muni-card-title">Health &amp; Pest</h4>
+                  <p class="muni-card-desc">Mosquitoes, sanitation</p>
+                  <div class="muni-arrow-circle muni-arrow-health">
+                    <span>➜</span>
+                  </div>
+                </div>
+
+                <!-- 10. Other Civic Issue (Span Full Across 3 Columns) -->
+                <div class="muni-service-card muni-card-other muni-card-span-full" data-category="other" onclick="ServicesEngine.openCardActionSheet('other')">
+                  <div class="muni-card-3d-frame">
+                    <img src="assets/services/icon_other_civic.png" class="muni-card-3d-img" alt="Other Civic Issue">
+                  </div>
+                  <div class="muni-card-span-body">
+                    <h4 class="muni-card-title">Other Civic Issue</h4>
+                    <p class="muni-card-desc">Any other municipal or city concern not listed above</p>
+                  </div>
+                  <div class="muni-arrow-circle muni-arrow-other">
+                    <span>➜</span>
+                  </div>
+                </div>
+
               </div>
 
-              <!-- Nearby Professionals Section -->
-              <div class="nearby-pros-section">
-                <div class="nearby-pros-header">
-                  <h3 class="section-title-sm">Nearby Professionals</h3>
-                  <button class="see-all-pros-btn" onclick="ServicesEngine.showAllCategories()">See All</button>
+              <!-- 5. More Municipal Services Expandable Banner -->
+              <div class="muni-more-services-banner" onclick="ServicesEngine.openMoreServicesModal()">
+                <div class="muni-more-icon-box">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="20" height="20">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                  </svg>
+                </div>
+                <div class="muni-more-texts">
+                  <h4>More Municipal Services</h4>
+                  <p>Trees, animal care, property tax, health &amp; more</p>
+                </div>
+                <div class="muni-more-arrow-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+                <svg class="muni-more-watermark" viewBox="0 0 24 24" fill="#15803D">
+                  <path d="M12 2C6.5 2 2 6.5 2 12c0 4 2.5 7.5 6 9 1-2 2-5 2-9 0-3 2-5 5-5 3 0 5 2 5 5 0 4 1 7 2 9 3.5-1.5 6-5 6-9 0-5.5-4.5-10-10-10z"/>
+                </svg>
+              </div>
+
+              <!-- 6. 24x7 Emergency Grievance Strip -->
+              <div class="muni-emergency-strip" onclick="CityAssist.navigateTo('emergency')">
+                <div class="muni-emergency-strip-left">
+                  <span class="muni-emergency-badge">🚨 24x7 HELPLINE</span>
+                  <div class="muni-emergency-title">Toll-Free Civic Control Room: <strong>1800-233-0244</strong></div>
+                </div>
+                <button type="button" class="muni-emergency-action-btn">
+                  SOS Call ➜
+                </button>
+              </div>
+
+              <!-- 7. Municipal Squad Container (Dark Forest Green Container) -->
+              <div class="muni-squad-container">
+                <div class="muni-squad-header">
+                  <div class="muni-squad-header-left">
+                    <div class="muni-squad-shield-icon">🛡️</div>
+                    <div>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <h3>Municipal Squad</h3>
+                        <span class="muni-squad-live-pulse">● Live</span>
+                      </div>
+                      <p>Dedicated teams for faster resolution</p>
+                    </div>
+                  </div>
+                  <button type="button" class="muni-squad-see-all" onclick="ServicesEngine.showAllCategories()">
+                    See All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
                 </div>
 
                 <div class="professionals-list-container" id="professionals-list-feed">
                   <!-- Rendered dynamically by ServicesEngine -->
                 </div>
               </div>
+
             </div>
           </section>
 
@@ -1507,13 +1713,20 @@
                   <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
               </button>
-              <button class="icon-action-btn dark-icon" onclick="CityAssist.showNotificationsModal()" title="Notifications">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-                <span class="notification-badge-dot">1</span>
-              </button>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button type="button" class="lang-nav-chip" onclick="I18nEngine.openLanguageModal()" title="Change Language / भाषा">
+                  <span style="font-size:0.9rem;">🌐</span>
+                  <span id="current-lang-pill-text">EN</span>
+                  <span style="font-size:0.6rem; opacity:0.7;">▼</span>
+                </button>
+                <button class="icon-action-btn dark-icon" onclick="CityAssist.showNotificationsModal()" title="Notifications">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                  <span class="notification-badge-dot">1</span>
+                </button>
+              </div>
             </div>
 
             <div class="screen-content home-page-scroll-content">
@@ -1539,8 +1752,8 @@
                       <span class="brand-green">City</span><span class="brand-navy">Assist</span>
                     </h1>
                   </div>
-                  <span class="greeting-sub">Good Morning,</span>
-                  <h2 class="greeting-user-name">Citizen <span class="wave-emoji">👋</span></h2>
+                  <span class="greeting-sub" data-i18n="home_greeting_morning">Good Morning,</span>
+                  <h2 class="greeting-user-name"><span id="home-display-name">Citizen</span> <span class="wave-emoji">👋</span></h2>
                   
                   <div class="home-location-pill" onclick="CityAssist.editLocation()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#0F7943" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="location-pin-icon">
@@ -1626,11 +1839,11 @@
                 <!-- Card Header with Live Status Tag -->
                 <div class="collection-header-row">
                   <div class="collection-title-wrap">
-                    <h3 class="collection-card-title">Today's Collection</h3>
+                    <h3 class="collection-card-title" data-i18n="home_todays_collection">Today's Collection</h3>
                   </div>
                   <div class="collection-live-pill">
                     <span class="live-dot-pulse"></span>
-                    <span>LIVE DISPATCH</span>
+                    <span data-i18n="home_live_dispatch">LIVE DISPATCH</span>
                   </div>
                 </div>
 
@@ -1638,7 +1851,7 @@
                   <!-- Left Details Block -->
                   <div class="collection-details-left">
                     <div class="waste-type-hero-badge">
-                      <span class="waste-category-badge-pill">♻️ Dry Waste</span>
+                      <span class="waste-category-badge-pill" data-i18n="home_dry_waste">♻️ Dry Waste</span>
                     </div>
                     
                     <div class="waste-time-badge">
@@ -1646,7 +1859,7 @@
                         <circle cx="12" cy="12" r="10"/>
                         <polyline points="12 6 12 12 16 14"/>
                       </svg>
-                      <span>10:30 AM – 11:00 AM</span>
+                      <span data-i18n="home_collection_time">10:30 AM – 11:00 AM</span>
                     </div>
 
                     <div class="vehicle-proximity-tag">
@@ -1703,28 +1916,28 @@
                     <circle cx="12" cy="12" r="10"/>
                     <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
                   </svg>
-                  <span>TRACK LIVE ROUTE</span>
+                  <span data-i18n="home_track_route">TRACK LIVE ROUTE</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
                     <line x1="5" y1="12" x2="19" y2="12"/>
                     <polyline points="12 5 19 12 12 19"/>
                   </svg>
                 </button>
 
-                <!-- Arrival Tune & Voice Preview Sub-Bar -->
-                <div class="home-tune-preview-bar" onclick="AudioAnnouncerEngine.openVoicePreviewModal()">
+                <!-- Arrival Tune & Voice Preview Button -->
+                <div class="home-tune-preview-bar" onclick="AudioAnnouncerEngine.openVoicePreviewModal()" role="button" tabindex="0" title="Truck Arrival Chime & Voice Alert">
                   <div class="tune-preview-left">
                     <span class="pulse-sound-emoji">🎙️</span>
-                    <span class="tune-preview-text">Truck Arrival Chime & Voice Alert</span>
+                    <span class="tune-preview-text" data-i18n="home_chime_subtext">Truck Arrival Chime & Voice Alert</span>
                   </div>
-                  <span class="tune-listen-btn">🔊 Hear Alert ➜</span>
+                  <span class="tune-preview-arrow">➜</span>
                 </div>
               </div>
 
               <!-- Section 2: Quick Actions (4 Exact Tiles) -->
               <div class="home-quick-actions-section">
                 <div class="section-title-row">
-                  <h3 class="section-bold-title">Quick Actions</h3>
-                  <button class="see-all-link-btn" onclick="CityAssist.navigateTo('my-requests')">SEE ALL</button>
+                  <h3 class="section-bold-title" data-i18n="home_quick_actions">Quick Actions</h3>
+                  <button class="see-all-link-btn" onclick="CityAssist.navigateTo('my-requests')" data-i18n="home_see_all">SEE ALL</button>
                 </div>
 
                 <div class="quick-actions-grid-4">
@@ -1737,7 +1950,7 @@
                         <line x1="12" y1="17" x2="12.01" y2="17"/>
                       </svg>
                     </div>
-                    <span class="action-tile-label">REPORT<br>ISSUE</span>
+                    <span class="action-tile-label" data-i18n-html="home_action_report">REPORT<br>ISSUE</span>
                   </div>
 
                   <!-- 2. FIND TECHNICIAN -->
@@ -1747,7 +1960,7 @@
                         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
                       </svg>
                     </div>
-                    <span class="action-tile-label">FIND<br>TECHNICIAN</span>
+                    <span class="action-tile-label" data-i18n-html="home_action_find_tech">FIND<br>TECHNICIAN</span>
                   </div>
 
                   <!-- 3. EMERGENCY HELP -->
@@ -1759,7 +1972,7 @@
                         <circle cx="12" cy="15" r="2" fill="#DC2626"/>
                       </svg>
                     </div>
-                    <span class="action-tile-label">EMERGENCY<br>HELP</span>
+                    <span class="action-tile-label" data-i18n-html="home_action_civic">CIVIC<br>SERVICES</span>
                   </div>
 
                   <!-- 4. REWARDS -->
@@ -1773,7 +1986,7 @@
                         <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
                       </svg>
                     </div>
-                    <span class="action-tile-label">REWARDS</span>
+                    <span class="action-tile-label" data-i18n-html="home_action_rewards">ECO<br>REWARDS</span>
                   </div>
                 </div>
               </div>
@@ -1848,7 +2061,7 @@
               </button>
               <div class="header-center-title">
                 <h1 class="header-title">Driver Dashboard</h1>
-                <span class="driver-vehicle-badge">Truck #MH-12-EA-4920</span>
+                <span class="driver-vehicle-badge" id="driver-vehicle-plate-badge">GCV-002 • MH-12-EA-4920</span>
               </div>
               <button class="icon-action-btn switch-citizen-btn" onclick="CityAssist.navigateTo('home')" title="Switch to Citizen View">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1925,6 +2138,27 @@
                 <div class="driver-status-badge status-not-started" id="driver-status-pill">
                   Not Started
                 </div>
+              </div>
+
+              <!-- ── PERMANENT VEHICLE ID ASSIGNMENT & SWITCHER CARD ── -->
+              <div style="background:#FFFFFF; border:1.5px solid #DBEAFE; border-radius:16px; padding:12px 14px; margin-bottom:12px; box-shadow:0 2px 6px rgba(30,58,138,0.05); display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="width:40px; height:40px; border-radius:10px; background:#EFF6FF; color:#1D4ED8; font-size:1.3rem; display:flex; align-items:center; justify-content:center;">
+                    🚚
+                  </div>
+                  <div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <span id="driver-vehicle-id-tag" style="background:#1E40AF; color:#FFFFFF; font-size:0.75rem; font-weight:900; padding:2px 7px; border-radius:6px; letter-spacing:0.02em;">GCV-002</span>
+                      <strong id="driver-vehicle-plate-text" style="font-size:0.86rem; color:#0F172A;">MH-12-EA-4920</strong>
+                    </div>
+                    <div id="driver-assigned-ward-tag" style="font-size:0.75rem; color:#475569; margin-top:2px; font-weight:700;">
+                      📍 Ward 2 - Shivaji Nagar (RT-02)
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onclick="GPSTrackerEngine.openVehicleSelectModal()" style="background:#F0FDF4; border:1px solid #BBF7D0; color:#15803D; font-size:0.72rem; font-weight:800; padding:6px 10px; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Official Municipality Vehicle Assignment">
+                  <span>🔒</span> Assigned
+                </button>
               </div>
 
               <!-- Route Overview Banner -->
@@ -2034,10 +2268,6 @@
                       <span class="btn-sub-title">Broadcasts Real Device GPS Coordinates 🛰️</span>
                     </div>
                   </button>
-
-                  <button type="button" id="btn-driver-demo" onclick="DriverEngine.startCollection('simulation')" style="background:#1E293B; border:1px dashed #3B82F6; color:#93C5FD; padding:9px 12px; border-radius:12px; font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-                    <span>🚗 Or Test with Demo Route Simulation</span>
-                  </button>
                 </div>
 
                 <!-- 2. Dual Action Row (Pause / Resume & End) -->
@@ -2095,10 +2325,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               </button>
               <div class="header-center-title">
-                <h1 class="header-title">PMC Command Center</h1>
-                <span class="muni-zone-badge">Pune Municipal Corp • Live Oversight</span>
+                <h1 class="header-title">TDMC Command Center</h1>
+                <span class="muni-zone-badge">तळेगाव दाभाडे नगरपरिषद • Live Portal</span>
               </div>
-              <button class="icon-action-btn refresh-btn" onclick="CityAssist.refreshMuniData()" title="Refresh Telemetry">
+              <button class="icon-action-btn refresh-btn" onclick="MunicipalityEngine.refreshTelemetry()" title="Refresh Telemetry">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10"/>
                   <polyline points="1 20 1 14 7 14"/>
@@ -2108,6 +2338,95 @@
             </div>
 
             <div class="screen-content municipality-page-content">
+              <!-- 1. 🏛️ Council Official Gov Branding Alignment Header -->
+              <div class="muni-gov-official-header">
+                <div class="muni-gov-crest-row">
+                  <div class="muni-emblem-badge">
+                    <span class="emblem-symbol">🏛️</span>
+                    <span class="emblem-star">★</span>
+                  </div>
+                  <div class="muni-gov-titles">
+                    <div class="gov-jurisdiction-tag">महाराष्ट्र शासन • GOVT OF MAHARASHTRA • TDMC</div>
+                    <h2 class="gov-council-name">तळेगाव दाभाडे नगरपरिषद</h2>
+                    <h3 class="gov-council-sub">Talegaon Dabhade Municipal Council</h3>
+                  </div>
+                  <div class="muni-live-status-indicator">
+                    <span class="live-dot-pulse"></span>
+                    <span class="live-status-txt">SECURE OPS</span>
+                  </div>
+                </div>
+                
+                <div class="muni-officer-strip">
+                  <div class="officer-meta">
+                    <span class="officer-icon">🛡️</span>
+                    <div>
+                      <strong class="officer-name">Er. S. R. Deshmukh</strong>
+                      <span class="officer-role">Chief Officer &amp; Executive Administrator (Wards 1–5)</span>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="firebase-live-badge" style="display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:800; padding:4px 9px; border-radius:12px; border:1px solid #86EFAC; background:#F0FDF4;">
+                      <span style="display:inline-block; width:7px; height:7px; background:#22C55E; border-radius:50%; box-shadow:0 0 6px #22C55E;"></span>
+                      <span style="color:#15803D;">Firebase Live Cloud</span>
+                    </div>
+                    <div class="gov-shift-tag">⚡ 24x7 Live Network</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Executive Tools: Advisory Creator & MIS Export Buttons -->
+              <div class="muni-executive-tools-grid">
+                <!-- Tool 1: Publish Citizen Advisory -->
+                <div class="muni-action-tool-card advisory-tool" onclick="MunicipalityEngine.openBroadcastAdvisoryModal()">
+                  <div class="tool-icon-box bg-purple">📢</div>
+                  <div class="tool-text-box">
+                    <h4>Publish Citizen Advisory</h4>
+                    <p>Broadcast water cuts, rain alerts &amp; sanitation notices</p>
+                  </div>
+                  <button class="tool-action-btn purple-btn" type="button">+ Post Notice</button>
+                </div>
+
+                <!-- Tool 2: Export Municipal MIS Monthly Report -->
+                <div class="muni-action-tool-card mis-tool" onclick="MunicipalityEngine.openMISReportModal()">
+                  <div class="tool-icon-box bg-emerald">📊</div>
+                  <div class="tool-text-box">
+                    <h4>Export MIS Monthly Report</h4>
+                    <p>Download official PDF docket &amp; Excel/CSV data logs</p>
+                  </div>
+                  <button class="tool-action-btn emerald-btn" type="button">📥 Export MIS</button>
+                </div>
+
+                <!-- Tool 3: Manage Fleet & Driver Assignments -->
+                <div class="muni-action-tool-card fleet-tool" onclick="MunicipalityEngine.openFleetManagementModal()">
+                  <div class="tool-icon-box bg-teal">🚚</div>
+                  <div class="tool-text-box">
+                    <h4>Fleet &amp; Driver Assignments</h4>
+                    <p>Reassign drivers, routes &amp; manage authorized municipal trucks</p>
+                  </div>
+                  <button class="tool-action-btn teal-btn" type="button">⚙️ Manage Fleet</button>
+                </div>
+
+                <!-- Tool 4: Staff Verification & RBAC Permissions -->
+                <div class="muni-action-tool-card staff-tool" onclick="MunicipalityEngine.openStaffManagementModal()">
+                  <div class="tool-icon-box bg-blue">🛡️</div>
+                  <div class="tool-text-box">
+                    <h4>Staff Verification &amp; RBAC</h4>
+                    <p>Approve municipal officer/driver accounts &amp; configure role permissions</p>
+                  </div>
+                  <button class="tool-action-btn blue-btn" type="button">🛡️ Manage Staff</button>
+                </div>
+
+                <!-- Tool 5: Administrative Audit Logs -->
+                <div class="muni-action-tool-card audit-tool" onclick="MunicipalityEngine.openAuditLogsModal()">
+                  <div class="tool-icon-box bg-purple">📜</div>
+                  <div class="tool-text-box">
+                    <h4>Administrative Audit Logs</h4>
+                    <p>Tamper-proof logs of fleet reassignments, grievance status &amp; approvals</p>
+                  </div>
+                  <button class="tool-action-btn purple-btn" type="button">📜 View Logs</button>
+                </div>
+              </div>
+
               <!-- KPI Summary Cards Grid -->
               <div class="muni-kpi-grid">
                 <div class="muni-kpi-card">
@@ -2129,16 +2448,16 @@
                 <div class="muni-kpi-card">
                   <div class="kpi-icon-wrap bg-yellow">📋</div>
                   <div class="kpi-content">
-                    <span class="kpi-value" id="muni-kpi-reports">6 Open</span>
+                    <span class="kpi-value" id="muni-kpi-reports">4 Open</span>
                     <span class="kpi-label">Citizen Reports</span>
                   </div>
                 </div>
 
                 <div class="muni-kpi-card">
-                  <div class="kpi-icon-wrap bg-red">🚨</div>
+                  <div class="kpi-icon-wrap bg-blue">⚡</div>
                   <div class="kpi-content">
-                    <span class="kpi-value" id="muni-kpi-sos">1 Alert</span>
-                    <span class="kpi-label">Active SOS</span>
+                    <span class="kpi-value" id="muni-kpi-sla">96.4%</span>
+                    <span class="kpi-label">SLA Compliance</span>
                   </div>
                 </div>
               </div>
@@ -2152,10 +2471,10 @@
                 </div>
                 <div class="muni-alert-body">
                   <div class="alert-info-row">
-                    <strong>Incident:</strong> Water Main Leakage & Street Flooding
+                    <strong>Incident:</strong> Water Main Leakage &amp; Street Flooding
                   </div>
                   <div class="alert-info-row">
-                    <strong>Location:</strong> Shivaji Nagar, Sector 2 near Model Colony
+                    <strong>Location:</strong> Shivaji Chowk, Ward 3 near Main Market
                   </div>
                   <div class="alert-status-strip">
                     <span class="badge-dispatched">Patrol Unit #4 Dispatched (ETA 4m)</span>
@@ -2164,79 +2483,120 @@
                 </div>
               </div>
 
-              <!-- Citywide Live Fleet Map & Telemetry -->
+              <!-- 4. 🗺️ REAL-TIME GOOGLE MAPS GIS FLEET & GRIEVANCE TELEMETRY -->
               <div class="muni-section-card">
-                <div class="section-card-header">
-                  <h4>Live Fleet Overview (Zone 1 - Pune Central)</h4>
-                  <span class="live-dot-tag"><span class="ping-circle"></span> Live GPS</span>
+                <div class="section-card-header" style="flex-wrap:wrap; gap:8px;">
+                  <div>
+                    <h4 style="margin:0 0 2px; display:flex; align-items:center; gap:6px;">
+                      <span>🗺️</span>
+                      <span>Real-Time Google Maps GIS Telemetry</span>
+                    </h4>
+                    <span style="font-size:0.74rem; color:#94A3B8;">Talegaon Dabhade • Live GPS Fleet &amp; Grievance Tracking</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button type="button" onclick="MunicipalityEngine.openGoogleApiKeyModal()" style="background:rgba(59,130,246,0.18); border:1px solid rgba(96,165,250,0.4); color:#93C5FD; font-size:0.7rem; font-weight:800; padding:3px 8px; border-radius:8px; cursor:pointer;" title="Configure Google Maps API Key">
+                      🔑 Google API
+                    </button>
+                    <span class="live-dot-tag"><span class="ping-circle"></span> Live GPS</span>
+                  </div>
+                </div>
+
+                <!-- Google Maps Type & Layer Switcher Bar -->
+                <div class="muni-map-controls-row" style="margin-bottom:6px;">
+                  <button type="button" class="muni-map-filter-chip google-layer-chip active" onclick="MunicipalityEngine.setGoogleMapType('google_streets', this)">
+                    🗺️ Google Streets
+                  </button>
+                  <button type="button" class="muni-map-filter-chip google-layer-chip" onclick="MunicipalityEngine.setGoogleMapType('google_traffic', this)">
+                    🚦 Live Traffic
+                  </button>
+                  <button type="button" class="muni-map-filter-chip google-layer-chip" onclick="MunicipalityEngine.setGoogleMapType('google_satellite', this)">
+                    🛰️ Satellite
+                  </button>
+                  <button type="button" class="muni-map-filter-chip google-layer-chip" onclick="MunicipalityEngine.setGoogleMapType('google_terrain', this)">
+                    🏔️ Terrain
+                  </button>
+                </div>
+
+                <!-- Entity Filter Bar (Fleet & Grievances) -->
+                <div class="muni-map-controls-row">
+                  <button type="button" class="muni-map-filter-chip active" onclick="MunicipalityEngine.filterMapLayer('all', this)">
+                    🌐 All Pins (<span id="map-cnt-all">8</span>)
+                  </button>
+                  <button type="button" class="muni-map-filter-chip" onclick="MunicipalityEngine.filterMapLayer('fleet', this)">
+                    🚚 Fleet Only (4)
+                  </button>
+                  <button type="button" class="muni-map-filter-chip" onclick="MunicipalityEngine.filterMapLayer('grievance', this)">
+                    🚨 Grievances (4)
+                  </button>
+                  <button type="button" class="muni-map-filter-chip center-btn" onclick="MunicipalityEngine.recenterMap()" title="Center Map on Talegaon Council">
+                    🎯 Recenter
+                  </button>
                 </div>
                 
-                <div class="muni-map-frame">
-                  <svg viewBox="0 0 340 160" class="muni-fleet-map-svg">
-                    <!-- City Roads Grid -->
-                    <rect width="340" height="160" fill="#0B132B"/>
-                    <path d="M-10,40 Q100,50 200,30 T350,60" stroke="#1C2541" stroke-width="14" fill="none"/>
-                    <path d="M-10,110 Q120,90 220,130 T350,110" stroke="#1C2541" stroke-width="14" fill="none"/>
-                    <path d="M60,-10 L80,170" stroke="#1C2541" stroke-width="10" fill="none"/>
-                    <path d="M180,-10 L160,170" stroke="#1C2541" stroke-width="10" fill="none"/>
-                    <path d="M280,-10 L300,170" stroke="#1C2541" stroke-width="10" fill="none"/>
-
-                    <!-- Zone Boundaries -->
-                    <rect x="20" y="20" width="130" height="120" rx="8" fill="#3A86FF" fill-opacity="0.08" stroke="#3A86FF" stroke-width="1" stroke-dasharray="4,3"/>
-                    <text x="30" y="36" fill="#60A5FA" font-size="9" font-weight="bold">Sector 2 (78%)</text>
-
-                    <rect x="190" y="20" width="130" height="120" rx="8" fill="#10B981" fill-opacity="0.08" stroke="#10B981" stroke-width="1" stroke-dasharray="4,3"/>
-                    <text x="200" y="36" fill="#34D399" font-size="9" font-weight="bold">Sector 4 Depot (92%)</text>
-
-                    <!-- Fleet Vehicle Pins -->
-                    <!-- Truck 1 (Driver Ramesh Shinde) -->
-                    <g id="muni-truck-1" transform="translate(100, 48)">
-                      <circle cx="0" cy="0" r="10" fill="#10B981" opacity="0.3" class="driver-radar-ping"/>
-                      <circle cx="0" cy="0" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="1.5"/>
-                      <text x="0" y="14" fill="#FFFFFF" font-size="8" text-anchor="middle" font-weight="bold">#4920</text>
-                    </g>
-
-                    <!-- Truck 2 (Sunil Patil) -->
-                    <g transform="translate(230, 95)">
-                      <circle cx="0" cy="0" r="7" fill="#3B82F6" stroke="#FFFFFF" stroke-width="1.5"/>
-                      <text x="0" y="14" fill="#FFFFFF" font-size="8" text-anchor="middle" font-weight="bold">#3012</text>
-                    </g>
-
-                    <!-- Truck 3 (Kiran Rao) -->
-                    <g transform="translate(280, 50)">
-                      <circle cx="0" cy="0" r="7" fill="#F59E0B" stroke="#FFFFFF" stroke-width="1.5"/>
-                      <text x="0" y="14" fill="#FFFFFF" font-size="8" text-anchor="middle" font-weight="bold">#1890</text>
-                    </g>
-                  </svg>
+                <!-- Interactive Map Viewport -->
+                <div class="muni-leaflet-map-container" id="muni-leaflet-map-wrapper">
+                  <div id="muni-live-map" style="width:100%; height:285px; border-radius:12px; z-index:1;"></div>
+                  <div id="muni-google-map-sdk" style="width:100%; height:285px; border-radius:12px; display:none;"></div>
                 </div>
 
-                <div class="muni-fleet-list">
-                  <div class="muni-fleet-row">
-                    <div class="fleet-row-title">
-                      <strong>Truck #MH-12-EA-4920</strong> (Ramesh Shinde)
-                      <span>Route 4B • Sector 2 Central</span>
-                    </div>
-                    <span class="badge-status-on">Active • 24 km/h</span>
-                  </div>
-                  <div class="muni-fleet-row">
-                    <div class="fleet-row-title">
-                      <strong>Truck #MH-12-BF-3012</strong> (Sunil Patil)
-                      <span>Route 2A • Model Colony</span>
-                    </div>
-                    <span class="badge-status-on">Active • 18 km/h</span>
-                  </div>
+                <!-- Map Legend Strip -->
+                <div class="muni-map-legend-strip">
+                  <div class="legend-item"><span class="legend-dot bg-truck-green"></span> 🚚 Active Truck</div>
+                  <div class="legend-item"><span class="legend-dot bg-alert-red"></span> 🔴 Critical Grievance</div>
+                  <div class="legend-item"><span class="legend-dot bg-warn-yellow"></span> 🟡 In Progress</div>
+                  <div class="legend-item"><span class="legend-dot bg-done-green"></span> 🟢 Resolved</div>
                 </div>
               </div>
 
-              <!-- Citizen Issues Triage Queue -->
+              <!-- 3. 🛠️ INTERACTIVE TICKET TRIAGE & SQUAD DISPATCH QUEUE -->
               <div class="muni-section-card">
-                <div class="section-card-header">
-                  <h4>Incoming Citizen Reports Queue</h4>
-                  <span class="queue-badge" id="muni-queue-count">3 Pending Triage</span>
+                <div class="section-card-header" style="flex-wrap:wrap; gap:8px;">
+                  <div>
+                    <h4 style="margin:0 0 2px;">🛠️ Live Citizen Issue Triage &amp; Dispatch Queue</h4>
+                    <span style="font-size:0.74rem; color:#94A3B8;">Instant Municipal Squad Allocation &amp; SLA Tracking</span>
+                  </div>
+                  <span class="queue-badge" id="muni-queue-count">2 Pending Triage</span>
                 </div>
 
+                <!-- Triage Filter Bar -->
+                <div class="muni-triage-filter-bar">
+                  <button type="button" class="triage-filter-btn active" onclick="MunicipalityEngine.filterTriage('all', this)">All (4)</button>
+                  <button type="button" class="triage-filter-btn" onclick="MunicipalityEngine.filterTriage('pending', this)">⏳ Pending (2)</button>
+                  <button type="button" class="triage-filter-btn" onclick="MunicipalityEngine.filterTriage('assigned', this)">🚚 Dispatched (1)</button>
+                  <button type="button" class="triage-filter-btn" onclick="MunicipalityEngine.filterTriage('resolved', this)">✅ Resolved (1)</button>
+                </div>
+
+                <!-- Triage Search & Ward Filter -->
+                <div class="muni-triage-search-row">
+                  <input type="text" id="muni-triage-search" oninput="MunicipalityEngine.searchTriage(this.value)" placeholder="🔍 Search by Ticket ID, location or issue..." class="muni-triage-search-input">
+                  <select id="muni-triage-ward-select" onchange="MunicipalityEngine.filterTriageByWard(this.value)" class="muni-triage-ward-select">
+                    <option value="all">All Wards (1–5)</option>
+                    <option value="1">Ward 1 - Station Road</option>
+                    <option value="2">Ward 2 - Samta Colony</option>
+                    <option value="3">Ward 3 - Gaothan</option>
+                    <option value="4">Ward 4 - Model Colony</option>
+                    <option value="5">Ward 5 - MIDC Suburbs</option>
+                  </select>
+                </div>
+
+                <!-- Dynamic Triage Cards List -->
                 <div class="muni-triage-list" id="muni-triage-list">
                   <!-- Rendered dynamically by JS -->
+                </div>
+              </div>
+
+              <!-- 5. 🏆 WARD-BY-WARD SLA PERFORMANCE & CLEANLINESS INDEX -->
+              <div class="muni-section-card">
+                <div class="section-card-header">
+                  <div>
+                    <h4 style="margin:0 0 2px;">🏆 Ward SLA Performance &amp; Swachh Index</h4>
+                    <span style="font-size:0.74rem; color:#94A3B8;">Wards 1 to 5 Live Cleanliness Ranking &amp; Resolution Velocity</span>
+                  </div>
+                  <span class="live-dot-tag" style="background:#DCFCE7; color:#15803D; font-weight:800;">Swachh 2026</span>
+                </div>
+
+                <div class="muni-wards-performance-list" id="muni-wards-list">
+                  <!-- Rendered dynamically by MunicipalityEngine.renderWardsPerformance() -->
                 </div>
               </div>
 
@@ -2263,47 +2623,38 @@
                   <!-- SVG Bar Chart -->
                   <div class="muni-chart-container">
                     <svg viewBox="0 0 320 120" class="muni-bar-chart-svg">
-                      <!-- Grid Lines -->
                       <line x1="20" y1="20" x2="310" y2="20" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3,3"/>
                       <line x1="20" y1="55" x2="310" y2="55" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="3,3"/>
                       <line x1="20" y1="90" x2="310" y2="90" stroke="#E2E8F0" stroke-width="1.5"/>
 
-                      <!-- Mon (12.4T) -->
                       <rect x="35" y="42" width="22" height="48" rx="4" fill="url(#barGreenGrad)" class="muni-bar-item"/>
                       <text x="46" y="36" font-size="8" fill="#1E293B" font-weight="bold" text-anchor="middle">12.4</text>
                       <text x="46" y="104" font-size="8" fill="#64748B" font-weight="600" text-anchor="middle">Mon</text>
 
-                      <!-- Tue (14.1T) -->
                       <rect x="75" y="34" width="22" height="56" rx="4" fill="url(#barGreenGrad)" class="muni-bar-item"/>
                       <text x="86" y="28" font-size="8" fill="#1E293B" font-weight="bold" text-anchor="middle">14.1</text>
                       <text x="86" y="104" font-size="8" fill="#64748B" font-weight="600" text-anchor="middle">Tue</text>
 
-                      <!-- Wed (13.8T) -->
                       <rect x="115" y="36" width="22" height="54" rx="4" fill="url(#barGreenGrad)" class="muni-bar-item"/>
                       <text x="126" y="30" font-size="8" fill="#1E293B" font-weight="bold" text-anchor="middle">13.8</text>
                       <text x="126" y="104" font-size="8" fill="#64748B" font-weight="600" text-anchor="middle">Wed</text>
 
-                      <!-- Thu (15.6T) -->
                       <rect x="155" y="26" width="22" height="64" rx="4" fill="url(#barGreenGrad)" class="muni-bar-item"/>
                       <text x="166" y="20" font-size="8" fill="#1E293B" font-weight="bold" text-anchor="middle">15.6</text>
                       <text x="166" y="104" font-size="8" fill="#64748B" font-weight="600" text-anchor="middle">Thu</text>
 
-                      <!-- Fri (14.9T) -->
                       <rect x="195" y="30" width="22" height="60" rx="4" fill="url(#barGreenGrad)" class="muni-bar-item"/>
                       <text x="206" y="24" font-size="8" fill="#1E293B" font-weight="bold" text-anchor="middle">14.9</text>
                       <text x="206" y="104" font-size="8" fill="#64748B" font-weight="600" text-anchor="middle">Fri</text>
 
-                      <!-- Sat (16.2T - Peak) -->
                       <rect x="235" y="22" width="22" height="68" rx="4" fill="#15803D" class="muni-bar-item"/>
                       <text x="246" y="16" font-size="8" fill="#15803D" font-weight="bold" text-anchor="middle">16.2</text>
                       <text x="246" y="104" font-size="8" fill="#0F172A" font-weight="700" text-anchor="middle">Sat</text>
 
-                      <!-- Sun (11.5T) -->
                       <rect x="275" y="46" width="22" height="44" rx="4" fill="url(#barGreenGrad)" class="muni-bar-item"/>
                       <text x="286" y="40" font-size="8" fill="#1E293B" font-weight="bold" text-anchor="middle">11.5</text>
                       <text x="286" y="104" font-size="8" fill="#64748B" font-weight="600" text-anchor="middle">Sun</text>
 
-                      <!-- Gradients -->
                       <defs>
                         <linearGradient id="barGreenGrad" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stop-color="#22C55E"/>
@@ -2316,33 +2667,25 @@
 
                 <!-- 2. Dual Breakdown Row: Category Distribution Donut & Ward Speed -->
                 <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
-                  <!-- Donut Chart & Legend -->
                   <div class="muni-analytics-subcard">
                     <strong style="font-size:0.85rem; color:#0F172A; margin-bottom:10px; display:block;">Issue Category Distribution</strong>
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                      <!-- SVG Donut -->
                       <svg width="90" height="90" viewBox="0 0 36 36" class="muni-donut-chart">
-                        <!-- Background Circle -->
                         <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F1F5F9" stroke-width="4.5"/>
-                        <!-- Waste 45% (Green) -->
                         <circle cx="18" cy="18" r="14" fill="transparent" stroke="#16A34A" stroke-width="4.5" stroke-dasharray="45 55" stroke-dashoffset="25"/>
-                        <!-- Roads 25% (Blue) -->
                         <circle cx="18" cy="18" r="14" fill="transparent" stroke="#2563EB" stroke-width="4.5" stroke-dasharray="25 75" stroke-dashoffset="-20"/>
-                        <!-- Drainage 18% (Amber) -->
                         <circle cx="18" cy="18" r="14" fill="transparent" stroke="#F59E0B" stroke-width="4.5" stroke-dasharray="18 82" stroke-dashoffset="-45"/>
-                        <!-- Lighting 12% (Purple) -->
                         <circle cx="18" cy="18" r="14" fill="transparent" stroke="#8B5CF6" stroke-width="4.5" stroke-dasharray="12 88" stroke-dashoffset="-63"/>
                         <text x="18" y="20.5" font-size="6" font-weight="800" text-anchor="middle" fill="#0F172A">45%</text>
                       </svg>
 
-                      <!-- Legend List -->
                       <div style="flex:1; display:flex; flex-direction:column; gap:5px; font-size:0.75rem;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                           <span style="display:flex; align-items:center; gap:5px; color:#475569;"><span style="width:8px; height:8px; background:#16A34A; border-radius:50%;"></span> Solid Waste</span>
                           <strong style="color:#0F172A;">45%</strong>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                          <span style="display:flex; align-items:center; gap:5px; color:#475569;"><span style="width:8px; height:8px; background:#2563EB; border-radius:50%;"></span> Road & Potholes</span>
+                          <span style="display:flex; align-items:center; gap:5px; color:#475569;"><span style="width:8px; height:8px; background:#2563EB; border-radius:50%;"></span> Road &amp; Potholes</span>
                           <strong style="color:#0F172A;">25%</strong>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2360,35 +2703,35 @@
                   <!-- Ward Resolution Velocity -->
                   <div class="muni-analytics-subcard">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                      <strong style="font-size:0.85rem; color:#0F172A;">Ward Resolution Velocity</strong>
-                      <span style="font-size:0.72rem; color:#16A34A; font-weight:700;">Avg: 31 mins</span>
+                      <strong style="font-size:0.85rem; color:#0F172A;">Ward Resolution Velocity (Average)</strong>
+                      <span style="font-size:0.72rem; color:#16A34A; font-weight:700;">TDMC Avg: 25.6 mins</span>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px;">
                       <div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
-                          <span style="color:#334155; font-weight:600;">FC Road & Model Colony</span>
-                          <strong style="color:#15803D;">22 mins</strong>
+                          <span style="color:#334155; font-weight:600;">Ward 4 (Model Colony &amp; Lake Zone)</span>
+                          <strong style="color:#15803D;">18 mins (Fastest)</strong>
                         </div>
                         <div style="width:100%; height:6px; background:#E2E8F0; border-radius:6px; overflow:hidden;">
-                          <div style="width:88%; height:100%; background:#16A34A; border-radius:6px;"></div>
+                          <div style="width:94%; height:100%; background:#16A34A; border-radius:6px;"></div>
                         </div>
                       </div>
                       <div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
-                          <span style="color:#334155; font-weight:600;">Shivaji Nagar Sector 2</span>
-                          <strong style="color:#2563EB;">28 mins</strong>
+                          <span style="color:#334155; font-weight:600;">Ward 1 (Station Road &amp; Market)</span>
+                          <strong style="color:#2563EB;">22 mins</strong>
                         </div>
                         <div style="width:100%; height:6px; background:#E2E8F0; border-radius:6px; overflow:hidden;">
-                          <div style="width:74%; height:100%; background:#2563EB; border-radius:6px;"></div>
+                          <div style="width:82%; height:100%; background:#2563EB; border-radius:6px;"></div>
                         </div>
                       </div>
                       <div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
-                          <span style="color:#334155; font-weight:600;">Kothrud Depot Zone</span>
-                          <strong style="color:#F59E0B;">36 mins</strong>
+                          <span style="color:#334155; font-weight:600;">Ward 3 (Gaothan &amp; Indrayani)</span>
+                          <strong style="color:#F59E0B;">25 mins</strong>
                         </div>
                         <div style="width:100%; height:6px; background:#E2E8F0; border-radius:6px; overflow:hidden;">
-                          <div style="width:58%; height:100%; background:#F59E0B; border-radius:6px;"></div>
+                          <div style="width:70%; height:100%; background:#F59E0B; border-radius:6px;"></div>
                         </div>
                       </div>
                     </div>
@@ -2397,12 +2740,12 @@
               </div>
 
               <!-- Quick Municipal Action Buttons -->
-              <div class="muni-quick-actions">
-                <button class="muni-btn primary" onclick="CityAssist.broadcastCityAlert()">
-                  📢 Broadcast Ward Advisory
+              <div class="muni-quick-actions" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button class="muni-btn primary" onclick="MunicipalityEngine.openBroadcastAdvisoryModal()">
+                  📢 Post Advisory
                 </button>
-                <button class="muni-btn secondary" onclick="CityAssist.navigateTo('driver')">
-                  🚚 View Driver Dashboard
+                <button class="muni-btn secondary" onclick="MunicipalityEngine.openFleetManagementModal()">
+                  🚚 Manage Fleet
                 </button>
               </div>
             </div>
@@ -2650,12 +2993,13 @@
             <a href="javascript:void(0)" class="drawer-nav-item" onclick="CityAssist.navigateTo('profile')">
               <span>👤 My Profile</span>
             </a>
+            <a href="javascript:void(0)" class="drawer-nav-item" onclick="I18nEngine.openLanguageModal(); CityAssist.closeDrawer();" style="background:#F0FDF4; border:1px solid #DCFCE7; border-radius:12px; margin:4px 0; display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:#15803D; font-weight:800;">🌐 Change Language / भाषा</span>
+              <span class="drawer-lang-badge" id="drawer-lang-badge" style="background:#15803D; color:#FFF; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:8px;">English</span>
+            </a>
             <div style="height:1px; background:#E2E8F0; margin:8px 0;"></div>
             <a href="javascript:void(0)" class="drawer-nav-item" onclick="CityAssist.navigateTo('driver')">
-              <span>🚚 Driver Mode</span>
-            </a>
-            <a href="javascript:void(0)" class="drawer-nav-item" onclick="window.open(location.href, '_blank'); CityAssist.closeDrawer();" title="Open Driver Simulation in Split Window / Second Tab">
-              <span>🚗 Open Driver Mode in New Tab</span>
+              <span>🚚 Municipal Driver Portal</span>
             </a>
             <a href="javascript:void(0)" class="drawer-nav-item" onclick="CityAssist.navigateTo('municipality')">
               <span>🏛️ Municipal Command Center</span>
@@ -2687,10 +3031,12 @@
   <!-- Google Identity Services (Real Google Sign-In) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Supabase & Firebase Realtime & Auth SDKs -->
+  <!-- Supabase & Firebase Realtime, Firestore, App Check & Auth SDKs -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
   <!-- Leaflet JS Interactive Maps (No API Key Required) -->
@@ -2698,7 +3044,10 @@
   <script src="js/leaflet_engine.js?v=4.0"></script>
 
   <!-- Core App Scripts -->
+  <script src="js/config.js?v=1.0"></script>
+  <script src="js/i18n.js?v=6.0"></script>
   <script src="js/data.js?v=4.0"></script>
+  <script src="js/firebase_service.js?v=1.0"></script>
   <script src="js/auth_engine.js?v=4.0"></script>
   <script src="js/notification_engine.js?v=4.0"></script>
   <script src="js/ai_engine.js?v=4.0"></script>

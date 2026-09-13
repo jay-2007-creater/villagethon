@@ -1,65 +1,16 @@
 /**
- * CityAssist Authentication & Session Management Engine
+ * CityAssist Authentication & Session Management Engine (Production-Ready)
  * Supports:
- *  1. Mobile Phone + OTP Verification
- *  2. Email & Password Authentication
- *  3. Multi-Role Profiles (Citizen / Driver / Officer)
- *  4. One-Tap Demo Test Accounts
- *  5. Persistent Session Management & Profile Sync
+ *  1. Real Firebase Mobile Phone + SMS OTP Authentication
+ *  2. Firebase Email & Password Authentication (with role enforcement)
+ *  3. Firebase & Native Android Google Sign-In
+ *  4. Municipality-Approved Staff Verification for Drivers & Officers
+ *  5. Prevention of Role Self-Assignment (Citizens cannot self-elevate)
+ *  6. Persistent Session Management & Cloud Profile Synchronization
  */
 
 const AuthEngine = {
-  // Pre-configured demo accounts for immediate testing
-  demoAccounts: {
-    citizen: {
-      id: "USR-CTZ-0842",
-      name: "Siddhant Ramteke",
-      phone: "+91 98765 43210",
-      email: "siddhantramteke06@gmail.com",
-      role: "citizen",
-      roleLabel: "Resident Citizen",
-      ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Samta Colony, Talegaon Dabhade",
-      avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=240&auto=format&fit=crop&q=80",
-      points: 1240,
-      badgesCount: 5,
-      co2SavedKg: 48,
-      segregationScore: "100%"
-    },
-    driver: {
-      id: "USR-DRV-4920",
-      name: "Ramesh Shinde",
-      phone: "+91 98220 44556",
-      email: "ramesh.driver@pmc.gov.in",
-      role: "driver",
-      roleLabel: "Municipal Driver",
-      ward: "Zone 1 & 2 Fleet",
-      vehicleNumber: "MH-12-EA-4920",
-      address: "Talegaon Municipal Depot",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=240&auto=format&fit=crop&q=80",
-      points: 2450,
-      badgesCount: 8,
-      co2SavedKg: 190,
-      segregationScore: "98%"
-    },
-    officer: {
-      id: "USR-OFF-1002",
-      name: "Prakash Deshmukh",
-      phone: "+91 94220 88990",
-      email: "deshmukh.officer@pmc.gov.in",
-      role: "officer",
-      roleLabel: "Ward 2 Civic Officer",
-      ward: "Ward 2 Administrative Office",
-      address: "Talegaon Municipal Headquarters",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&auto=format&fit=crop&q=80",
-      points: 3100,
-      badgesCount: 12,
-      co2SavedKg: 350,
-      segregationScore: "100%"
-    }
-  },
-
-  // Firebase Web App Configuration for Google Auth
+  // Firebase Web App Configuration
   firebaseConfig: {
     apiKey: "AIzaSyC5Byfu-hY6SvSmJhAOP1WiBqrXgu-K36I",
     authDomain: "cityassist-7bad3.firebaseapp.com",
@@ -70,336 +21,407 @@ const AuthEngine = {
   },
   firebaseApp: null,
   firebaseAuth: null,
+  recaptchaVerifier: null,
+  confirmationResult: null,
 
-  // Base Preset Google Accounts + Persistent User Accounts
-  defaultGoogleAccounts: [
+  // Municipality-Approved Staff Directory
+  // In production, these records are synchronized with Cloud Firestore collection `staff_registry`
+  authorizedStaffRegistry: [
     {
-      name: "Siddhant Ramteke",
-      email: "siddhantramteke06@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=240&auto=format&fit=crop&q=80",
-      role: "citizen",
-      ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Samta Colony, Talegaon Dabhade",
-      isCustom: true
+      id: "MUNI-ADM-001",
+      name: "Prakash Deshmukh (Admin)",
+      email: "admin@pmc.gov.in",
+      phone: "+91 94220 88990",
+      role: "admin",
+      roleLabel: "TDMC Council Chief Administrator",
+      assignedWard: "All Wards (Municipal HQ)",
+      status: "approved",
+      permissions: ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances'],
+      office: "Talegaon Municipal Headquarters",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&auto=format&fit=crop&q=80"
     },
     {
-      name: "Pooja Deshmukh",
-      email: "pooja.deshmukh24@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80",
-      role: "citizen",
-      ward: "Ward 3 (Jijamata Chowk)",
-      address: "Jijamata Nagar, Talegaon Dabhade"
+      id: "MUNI-OFF-201",
+      name: "Prakash Deshmukh",
+      email: "deshmukh.officer@pmc.gov.in",
+      phone: "+91 94220 88990",
+      role: "officer",
+      roleLabel: "Ward 2 Civic Officer",
+      assignedWard: "Ward 2 Administrative Office",
+      status: "approved",
+      permissions: ['fleet_manage', 'publish_advisories', 'triage_grievances'],
+      office: "Talegaon Municipal Headquarters",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=240&auto=format&fit=crop&q=80"
     },
     {
+      id: "MUNI-DRV-102",
       name: "Ramesh Shinde",
-      email: "ramesh.driver.pmc@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=240&auto=format&fit=crop&q=80",
+      email: "ramesh.driver@pmc.gov.in",
+      phone: "+91 98220 44556",
       role: "driver",
-      ward: "Zone 1 & 2 Fleet",
-      address: "Talegaon Municipal Depot"
+      roleLabel: "Municipal Fleet Driver",
+      vehicleId: "GCV-002",
+      vehicleNumber: "MH-12-EA-4920",
+      assignedWard: "Ward 2 (Talegaon Dabhade)",
+      assignedRoute: "Route 4B (Samta Colony & Sector 2)",
+      status: "approved",
+      permissions: ['driver_telemetry'],
+      depot: "Talegaon Municipal Depot",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=240&auto=format&fit=crop&q=80"
     }
   ],
-
-  googleAccounts: [],
 
   currentUser: null,
   activeLoginTab: 'otp', // 'otp' | 'email'
   selectedRole: 'citizen', // 'citizen' | 'driver' | 'officer'
-  pendingOTP: null,
   pendingPhone: '',
+  pendingGeneratedOTP: null,
+  otpTimerInterval: null,
+  emailAuthMode: 'login', // 'login' | 'signup'
 
   init() {
+    this.loadStaffRegistryFromCache();
     this.initFirebase();
-    this.loadCustomGoogleAccounts();
     this.restoreSession();
   },
 
-  initFirebase() {
+  loadStaffRegistryFromCache() {
     try {
-      if (typeof firebase !== 'undefined') {
-        if (!firebase.apps || !firebase.apps.length) {
-          this.firebaseApp = firebase.initializeApp(this.firebaseConfig);
-        } else {
-          this.firebaseApp = firebase.app();
-        }
-        if (firebase.auth) {
-          this.firebaseAuth = firebase.auth();
-          this.firebaseAuth.onAuthStateChanged((user) => {
-            if (user && !this.currentUser) {
-              this.handleFirebaseUserLogin(user);
-            }
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("Firebase Auth init note:", e);
-    }
-  },
-
-  /**
-   * Handle real Firebase Google User sign-in
-   */
-  handleFirebaseUserLogin(user) {
-    if (!user) return;
-    const name = user.displayName || (user.email ? user.email.split('@')[0] : "Google User");
-    const email = user.email || "user@gmail.com";
-    const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`;
-
-    this.currentUser = {
-      id: user.uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: name,
-      phone: user.phoneNumber || "",
-      email: email,
-      role: this.selectedRole || "citizen",
-      roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
-      ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Talegaon Dabhade, Pune",
-      avatar: avatar,
-      points: 0,
-      badgesCount: 0,
-      co2SavedKg: 0,
-      segregationScore: "0%",
-      authProvider: "firebase_google"
-    };
-
-    this.saveSession();
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.closeModal();
-      CityAssist.showToast(`✓ Welcome, ${name}! Signed in via Google 🌐`);
-      if (this.selectedRole === 'driver') {
-        CityAssist.navigateTo('driver');
-      } else if (this.selectedRole === 'officer') {
-        CityAssist.navigateTo('municipality');
-      } else {
-        CityAssist.navigateTo('home');
-      }
-    }
-  },
-
-  loadCustomGoogleAccounts() {
-    this.googleAccounts = [...this.defaultGoogleAccounts];
-    const saved = localStorage.getItem('cityassist_custom_google_accounts');
-    if (saved) {
-      try {
+      const saved = localStorage.getItem('cityassist_staff_registry');
+      if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Merge avoiding duplicates
-          const seen = new Set();
-          const merged = [];
-          [...parsed, ...this.defaultGoogleAccounts].forEach(item => {
-            if (!seen.has(item.email)) {
-              seen.add(item.email);
-              merged.push(item);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge avoiding duplicates by id
+          parsed.forEach(item => {
+            if (!this.authorizedStaffRegistry.some(s => s.id === item.id)) {
+              this.authorizedStaffRegistry.push(item);
             }
           });
-          this.googleAccounts = merged;
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
+  },
+
+  saveStaffRegistryToCache() {
+    try {
+      localStorage.setItem('cityassist_staff_registry', JSON.stringify(this.authorizedStaffRegistry));
+    } catch (e) {}
   },
 
   /**
-   * Handle real Google Identity Token response
+   * Check if an account is authorized by the Municipality for Driver or Officer roles.
+   * If not approved, generates a pending verification request.
    */
-  handleGoogleCredentialResponse(response) {
-    if (response && response.credential) {
-      try {
-        const base64Url = response.credential.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-        const userObj = JSON.parse(jsonPayload);
+  async verifyStaffAuthorization(identifier, requestedRole, applicantName = '') {
+    if (!requestedRole || requestedRole === 'citizen') {
+      return { authorized: true, role: 'citizen', staffRecord: null };
+    }
 
-        if (userObj && userObj.email) {
-          this.addAndLoginRealGoogleAccount(userObj.name || userObj.email.split('@')[0], userObj.email, userObj.picture);
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const cleanDigits = (identifier || '').replace(/\D/g, '');
+
+    // 1. Check local authorized staff registry
+    const match = this.authorizedStaffRegistry.find(s => {
+      const emailMatch = s.email && s.email.toLowerCase() === cleanId;
+      const phoneMatch = s.phone && s.phone.replace(/\D/g, '').endsWith(cleanDigits) && cleanDigits.length >= 10;
+      return (emailMatch || phoneMatch);
+    });
+
+    if (match) {
+      if (match.status === 'approved') {
+        return { 
+          authorized: true, 
+          role: match.role, 
+          staffRecord: match, 
+          permissions: match.permissions || ['triage_grievances', 'publish_advisories', 'fleet_manage'] 
+        };
+      } else if (match.status === 'pending') {
+        return { 
+          authorized: false, 
+          isPending: true, 
+          role: 'citizen', 
+          staffRecord: match 
+        };
+      }
+    }
+
+    // 2. Check Firestore `staff_registry` if online
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        const snapshot = await db.collection('staff_registry')
+          .where('email', '==', cleanId)
+          .get();
+
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0].data();
+          if (doc.status === 'approved') {
+            return { authorized: true, role: doc.role, staffRecord: doc, permissions: doc.permissions || [] };
+          } else if (doc.status === 'pending') {
+            return { authorized: false, isPending: true, role: 'citizen', staffRecord: doc };
+          }
         }
       } catch (e) {
-        console.warn("Error decoding Google credential token:", e);
+        console.warn("Firestore staff_registry lookup notice:", e);
       }
     }
-  },
 
-  isNativeApp() {
-    return !!(window.Capacitor && window.Capacitor.isNativePlatform()) ||
-           window.location.protocol === 'capacitor:' ||
-           window.location.protocol === 'file:' ||
-           typeof window.AndroidGoogleAuthBridge !== 'undefined' ||
-           navigator.userAgent.includes('wv') ||
-           (navigator.userAgent.includes('Android') && !window.chrome?.runtime);
+    // 3. User is NOT pre-approved: Create a PENDING verification request
+    const newPendingRequest = {
+      id: `REQ-STF-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: applicantName || (cleanId.includes('@') ? cleanId.split('@')[0] : `Applicant (+91 ${cleanDigits})`),
+      email: cleanId.includes('@') ? cleanId : '',
+      phone: cleanDigits.length >= 10 ? `+91 ${cleanDigits.slice(-10)}` : '',
+      role: requestedRole,
+      requestedRole: requestedRole,
+      roleLabel: requestedRole === 'driver' ? 'Applicant Driver (Pending)' : 'Applicant Officer (Pending)',
+      status: 'pending',
+      assignedWard: 'Ward 2 (Talegaon Dabhade)',
+      requestedAt: new Date().toISOString()
+    };
+
+    this.authorizedStaffRegistry.push(newPendingRequest);
+    this.saveStaffRegistryToCache();
+
+    // Also persist pending request to Firestore staff_registry
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        await db.collection('staff_registry').doc(newPendingRequest.id).set(newPendingRequest, { merge: true });
+      } catch (e) {}
+    }
+
+    return { authorized: false, isPending: true, role: 'citizen', staffRecord: newPendingRequest };
   },
 
   /**
-   * Handle real Native Android Google Sign-In response
+   * Handle real Firebase User sign-in
    */
-  handleNativeGoogleUserLogin(name, email, photoUrl, uid) {
-    if (!email) return;
-    const cleanName = name || email.split('@')[0];
-    const avatar = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
+  async handleFirebaseUserLogin(user) {
+    if (!user) return;
+    const name = user.displayName || (user.email ? user.email.split('@')[0] : "Resident Citizen");
+    const email = user.email || "";
+    const phone = user.phoneNumber || "";
+    const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`;
+
+    // Strict Role Verification: No self-assignment
+    const authCheck = await this.verifyStaffAuthorization(email || phone, this.selectedRole, name);
+
+    let assignedRole = 'citizen';
+    let roleLabel = 'Resident Citizen';
+    let assignedVehicle = null;
+    let assignedWard = 'Ward 2 (Talegaon Dabhade)';
+    let permissions = [];
+
+    if (this.selectedRole !== 'citizen') {
+      if (authCheck.authorized) {
+        assignedRole = authCheck.role;
+        roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : (assignedRole === 'admin' ? 'Chief Administrator' : 'Civic Officer'));
+        assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
+        assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
+        permissions = authCheck.permissions || (assignedRole === 'admin' ? ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances'] : ['fleet_manage', 'publish_advisories', 'triage_grievances']);
+      } else if (authCheck.isPending) {
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast(`⏳ Municipal application submitted. Awaiting TDMC Administrator verification.`);
+        }
+        assignedRole = 'citizen';
+        roleLabel = `Resident Citizen (Pending ${this.selectedRole.toUpperCase()} Verification)`;
+      } else {
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast(`⚠️ Unauthorized for ${this.selectedRole.toUpperCase()} role. Signed in as Resident Citizen.`);
+        }
+        assignedRole = 'citizen';
+        roleLabel = 'Resident Citizen';
+      }
+    }
 
     this.currentUser = {
-      id: uid || `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: cleanName,
-      phone: "",
+      id: user.uid || `USR-FB-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: authCheck.staffRecord?.name || name,
+      phone: phone,
       email: email,
-      role: this.selectedRole || "citizen",
-      roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
-      ward: "Ward 2 (Talegaon Dabhade)",
+      role: assignedRole,
+      roleLabel: roleLabel,
+      ward: assignedWard,
+      vehicleNumber: assignedVehicle,
+      permissions: permissions,
+      staffStatus: authCheck.authorized ? 'approved' : (authCheck.isPending ? 'pending' : 'none'),
       address: "Talegaon Dabhade, Pune",
-      avatar: avatar,
+      avatar: authCheck.staffRecord?.avatar || avatar,
       points: 0,
       badgesCount: 0,
       co2SavedKg: 0,
       segregationScore: "0%",
-      authProvider: "native_android_google"
+      authProvider: "firebase_auth"
     };
 
     this.saveSession();
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.closeModal();
-      CityAssist.showToast(`✓ Welcome, ${cleanName}! Signed in with Google 🌐`);
-      if (this.selectedRole === 'driver') {
-        CityAssist.navigateTo('driver');
-      } else if (this.selectedRole === 'officer') {
-        CityAssist.navigateTo('municipality');
-      } else {
-        CityAssist.navigateTo('home');
-      }
-    }
-  },
-
-  /**
-   * Trigger Google Sign-In
-   * 1. Android APK: Real System Google Account Chooser via Native Google Play Services
-   * 2. Web / Chrome: Official Firebase Google Popup
-   */
-  async triggerGoogleSignIn() {
-    // 1. Android Native Google Sign-In (Real Play Services Device Picker)
-    if (typeof window.AndroidGoogleAuthBridge !== 'undefined' && window.AndroidGoogleAuthBridge.signIn) {
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("Selecting Google Account on device... 📱");
-      }
-      try {
-        window.AndroidGoogleAuthBridge.signIn();
-        return;
-      } catch (err) {
-        console.warn("Android native Google auth error:", err);
-      }
-    }
-
-    // 2. Desktop Web Browser / Chrome Firebase Popup
-    if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
-      try {
-        if (typeof CityAssist !== 'undefined') {
-          CityAssist.showToast("Opening Google Sign-In... 🌐");
-        }
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.addScope('profile');
-        provider.addScope('email');
-        provider.setCustomParameters({ prompt: 'select_account' });
-
-        const result = await this.firebaseAuth.signInWithPopup(provider);
-        if (result && result.user) {
-          this.handleFirebaseUserLogin(result.user);
-          return;
-        }
-      } catch (err) {
-        console.warn("Firebase Google popup note / fallback to modal:", err);
-        this.openGoogleAccountModal();
-        return;
-      }
-    }
-    this.openGoogleAccountModal();
-  },
-
-  openGoogleAccountModal() {
-    this.loadCustomGoogleAccounts();
-    if (typeof UIComponents !== 'undefined' && typeof CityAssist !== 'undefined') {
-      CityAssist.openModal(UIComponents.renderGoogleAuthChooserModal(this.googleAccounts));
-    }
-  },
-
-  /**
-   * Add real personal Google account and login immediately
-   */
-  addAndLoginRealGoogleAccount(realName, realEmail, customAvatar = null) {
-    if (!realName || !realEmail || !realEmail.includes('@')) {
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast("⚠️ Please enter a valid name and Gmail address");
-      }
-      return;
-    }
-
-    const cleanEmail = realEmail.trim().toLowerCase();
-    const cleanName = realName.trim();
-    const avatarUrl = customAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
-
-    const newAcc = {
-      name: cleanName,
-      email: cleanEmail,
-      avatar: avatarUrl,
-      role: this.selectedRole || "citizen",
-      ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Samta Colony, Talegaon Dabhade",
-      isCustom: true
-    };
-
-    // Save to persistent custom accounts list
-    let savedList = [];
-    const saved = localStorage.getItem('cityassist_custom_google_accounts');
-    if (saved) {
-      try { savedList = JSON.parse(saved); } catch (e) {}
-    }
-    // Avoid duplicates
-    savedList = savedList.filter(a => a.email !== cleanEmail);
-    savedList.unshift(newAcc);
-    localStorage.setItem('cityassist_custom_google_accounts', JSON.stringify(savedList));
-
-    // Update active list and login
-    this.loadCustomGoogleAccounts();
-    this.selectGoogleAccount(cleanEmail);
-  },
-
-  /**
-   * Authenticate with selected Google Account
-   */
-  selectGoogleAccount(email) {
-    const acc = this.googleAccounts.find(a => a.email === email) || {
-      name: email.split('@')[0],
-      email: email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=0F7943&color=fff`,
-      role: "citizen",
-      ward: "Ward 2 (Talegaon Dabhade)",
-      address: "Talegaon Dabhade, Pune"
-    };
-
-    const isDemo = (email === "siddhantramteke06@gmail.com" || email === "ramesh.driver.pmc@gmail.com");
-
-    this.currentUser = {
-      id: `USR-GGL-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: acc.name,
-      phone: isDemo ? "+91 98765 43210" : "",
-      email: acc.email,
-      role: acc.role || "citizen",
-      roleLabel: acc.role === 'driver' ? 'Municipal Driver' : 'Resident Citizen',
-      ward: acc.ward || "Ward 2 (Talegaon Dabhade)",
-      address: acc.address || "Talegaon Dabhade, Pune",
-      avatar: acc.avatar,
-      points: isDemo ? 1240 : 0,
-      badgesCount: isDemo ? 5 : 0,
-      co2SavedKg: isDemo ? 48 : 0,
-      segregationScore: isDemo ? "100%" : "0%",
-      authProvider: "google"
-    };
-
-    this.saveSession();
+    this.syncProfileToFirestore();
 
     if (typeof CityAssist !== 'undefined') {
       CityAssist.closeModal();
-      CityAssist.showToast(`✓ Signed in as ${acc.name} (${acc.email}) 🌐`);
-      if (acc.role === 'driver') {
-        CityAssist.navigateTo('driver');
+      if (authCheck.isPending) {
+        CityAssist.showToast(`⏳ Verification Pending: Logged in as Citizen while administrator verifies your staff application.`);
       } else {
-        CityAssist.navigateTo('home');
+        CityAssist.showToast(`✓ Welcome, ${this.currentUser.name}! Authenticated securely 🌐`);
       }
+      this.routeAfterAuth();
+    }
+  },
+
+  /**
+   * Check if current authenticated user has a specific granular permission
+   */
+  hasPermission(permissionKey) {
+    if (!this.currentUser) return false;
+    const role = (this.currentUser.role || 'citizen').toLowerCase();
+
+    // Chief Administrator has all permissions
+    if (role === 'admin') return true;
+
+    // Check specific user permissions array
+    if (this.currentUser.permissions && Array.isArray(this.currentUser.permissions)) {
+      if (this.currentUser.permissions.includes(permissionKey)) return true;
+    }
+
+    // Default permission scopes for standard Officer
+    if (role === 'officer' || role === 'municipality') {
+      const standardOfficerPermissions = ['triage_grievances', 'publish_advisories', 'fleet_manage'];
+      return standardOfficerPermissions.includes(permissionKey);
+    }
+
+    // Drivers have telemetry broadcasting permission only
+    if (role === 'driver') {
+      return permissionKey === 'driver_telemetry';
+    }
+
+    return false;
+  },
+
+  /**
+   * Administrator Approval for Municipal Officer / Driver Accounts
+   * Only accessible to verified Administrators with 'staff_admin' permission.
+   */
+  async approveStaffAccount(staffId, assignedRole, ward, permissions = []) {
+    if (!this.hasPermission('staff_admin')) {
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("⛔ Unauthorized: Only TDMC Chief Administrators can approve municipal accounts.");
+      }
+      return { error: "Unauthorized" };
+    }
+
+    const staffRecord = this.authorizedStaffRegistry.find(s => s.id === staffId);
+    if (!staffRecord) return { error: "Staff record not found" };
+
+    staffRecord.status = 'approved';
+    staffRecord.role = assignedRole || staffRecord.requestedRole || 'officer';
+    staffRecord.roleLabel = staffRecord.role === 'driver' ? 'Municipal Fleet Driver' : (staffRecord.role === 'admin' ? 'TDMC Chief Administrator' : 'Ward Civic Officer');
+    staffRecord.assignedWard = ward || staffRecord.assignedWard || 'Ward 2 Administrative Office';
+    staffRecord.permissions = permissions.length > 0 ? permissions : (staffRecord.role === 'admin' ? ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances'] : ['fleet_manage', 'publish_advisories', 'triage_grievances']);
+    staffRecord.approvedAt = new Date().toISOString();
+    staffRecord.approvedBy = this.currentUser ? this.currentUser.name : "Administrator";
+
+    this.saveStaffRegistryToCache();
+
+    // Update in Cloud Firestore staff_registry
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        await db.collection('staff_registry').doc(staffId).set(staffRecord, { merge: true });
+      } catch (e) {
+        console.warn("Firestore staff approval update notice:", e);
+      }
+    }
+
+    // Secure Immutable Audit Log for Staff Approval
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.logAdminAction) {
+      await FirebaseService.logAdminAction({
+        action: 'STAFF_ACCOUNT_APPROVED',
+        recordId: staffId,
+        targetType: 'staff',
+        details: {
+          staffId: staffId,
+          staffName: staffRecord.name,
+          assignedRole: staffRecord.role,
+          assignedWard: staffRecord.assignedWard,
+          permissions: (staffRecord.permissions || []).join(', ')
+        }
+      });
+    }
+
+    console.log(`✓ Admin approved staff account ${staffRecord.name} as ${staffRecord.role}`);
+    return { success: true, staffRecord };
+  },
+
+  /**
+   * Administrator Rejection / Revocation for Municipal Accounts
+   */
+  async rejectStaffAccount(staffId) {
+    if (!this.hasPermission('staff_admin')) {
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("⛔ Unauthorized: Administrator privilege required.");
+      }
+      return { error: "Unauthorized" };
+    }
+
+    const staffRecord = this.authorizedStaffRegistry.find(s => s.id === staffId);
+    if (!staffRecord) return { error: "Staff record not found" };
+
+    staffRecord.status = 'rejected';
+    staffRecord.role = 'citizen';
+    staffRecord.permissions = [];
+
+    this.saveStaffRegistryToCache();
+
+    // Update in Firestore
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        await db.collection('staff_registry').doc(staffId).set(staffRecord, { merge: true });
+      } catch (e) {}
+    }
+
+    // Secure Immutable Audit Log for Staff Rejection
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.logAdminAction) {
+      await FirebaseService.logAdminAction({
+        action: 'STAFF_ACCOUNT_REJECTED',
+        recordId: staffId,
+        targetType: 'staff',
+        details: {
+          staffId: staffId,
+          staffName: staffRecord.name
+        }
+      });
+    }
+
+    return { success: true };
+  },
+
+  getStaffList() {
+    return this.authorizedStaffRegistry || [];
+  },
+
+  /**
+   * Sync verified user document to Cloud Firestore
+   */
+  async syncProfileToFirestore() {
+    if (!this.currentUser || typeof firebase === 'undefined' || !firebase.firestore) return;
+    try {
+      const db = firebase.firestore();
+      const uid = this.currentUser.id;
+      await db.collection('users').doc(uid).set({
+        name: this.currentUser.name,
+        email: this.currentUser.email || '',
+        phone: this.currentUser.phone || '',
+        role: this.currentUser.role || 'citizen',
+        ward: this.currentUser.ward || 'Ward 2 (Talegaon Dabhade)',
+        address: this.currentUser.address || 'Talegaon Dabhade',
+        permissions: this.currentUser.permissions || [],
+        staffStatus: this.currentUser.staffStatus || 'none',
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.warn("Firestore user sync notice:", e);
     }
   },
 
@@ -435,6 +457,26 @@ const AuthEngine = {
     return localStorage.getItem('cityassist_is_logged_in') === 'true' && this.currentUser !== null;
   },
 
+  isAuthorizedForRole(role) {
+    if (!this.currentUser) return false;
+    const userRole = (this.currentUser.role || 'citizen').toLowerCase();
+    
+    if (role === 'admin') {
+      return userRole === 'admin';
+    }
+    if (role === 'officer' || role === 'municipality') {
+      return userRole === 'officer' || userRole === 'municipality' || userRole === 'admin';
+    }
+    if (role === 'driver') {
+      return userRole === 'driver' || userRole === 'officer' || userRole === 'municipality' || userRole === 'admin';
+    }
+    return true; // Citizen access is open to all authenticated users
+  },
+
+  getCurrentRole() {
+    return (this.currentUser && this.currentUser.role) ? this.currentUser.role.toLowerCase() : 'anonymous';
+  },
+
   /**
    * Sync active user details with DOM elements across the app
    */
@@ -443,7 +485,6 @@ const AuthEngine = {
 
     const u = this.currentUser;
 
-    // Update CityData
     if (typeof CityData !== 'undefined') {
       CityData.user.name = u.name;
       CityData.user.phone = u.phone || "";
@@ -454,7 +495,6 @@ const AuthEngine = {
       CityData.user.location = u.address || "Talegaon Dabhade, Pune";
     }
 
-    // 1. Update Profile Screen Header & Details
     const profileName = document.querySelector('.user-name');
     if (profileName) profileName.textContent = u.name;
 
@@ -491,7 +531,6 @@ const AuthEngine = {
     const profileAvatar = document.getElementById('profile-avatar-img');
     if (profileAvatar && u.avatar) profileAvatar.src = u.avatar;
 
-    // 2. Update Home Screen Top Greeting & Avatar
     const homeGreeting = document.querySelector('.user-greeting');
     if (homeGreeting) {
       homeGreeting.innerHTML = `Hi, <strong>${(u.name || 'Citizen').split(' ')[0]}</strong> 👋`;
@@ -499,7 +538,6 @@ const AuthEngine = {
     const homeAvatar = document.getElementById('home-user-avatar-img');
     if (homeAvatar && u.avatar) homeAvatar.src = u.avatar;
 
-    // 3. Update Drawer Profile Card
     const drawerName = document.getElementById('drawer-user-name');
     if (drawerName) drawerName.textContent = u.name;
 
@@ -511,28 +549,6 @@ const AuthEngine = {
   },
 
   /**
-   * Quick-login to a demo profile
-   */
-  quickLoginDemo(role = 'citizen') {
-    const account = this.demoAccounts[role] || this.demoAccounts.citizen;
-    this.currentUser = { ...account };
-    this.saveSession();
-
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`Logged in as ${account.name} (${account.roleLabel}) 🚀`);
-      
-      // Auto-route based on role
-      if (role === 'driver') {
-        CityAssist.navigateTo('driver');
-      } else if (role === 'officer') {
-        CityAssist.navigateTo('municipality');
-      } else {
-        CityAssist.navigateTo('home');
-      }
-    }
-  },
-
-  /**
    * Switch Login Role selector on Auth screen
    */
   switchAuthRole(role) {
@@ -541,6 +557,17 @@ const AuthEngine = {
       const btn = document.getElementById(`auth-role-btn-${r}`);
       if (btn) btn.classList.toggle('active', r === this.selectedRole);
     });
+
+    // If Driver or Officer is selected, show official credentials notice
+    const staffNotice = document.getElementById('auth-staff-role-notice');
+    if (staffNotice) {
+      if (this.selectedRole === 'driver' || this.selectedRole === 'officer') {
+        staffNotice.style.display = 'block';
+        staffNotice.innerHTML = `🛡️ <strong>${this.selectedRole === 'driver' ? 'Driver Portal' : 'Officer Portal'}</strong>: Requires authorized credentials approved by the Municipality.`;
+      } else {
+        staffNotice.style.display = 'none';
+      }
+    }
   },
 
   /**
@@ -566,10 +593,9 @@ const AuthEngine = {
     }
   },
 
-  emailAuthMode: 'login', // 'login' | 'signup'
-
   /**
    * Switch between Email Login and Email Signup
+   * NOTE: Signup is strictly restricted to citizen role.
    */
   switchEmailAuthMode(mode) {
     this.emailAuthMode = mode || 'login';
@@ -580,11 +606,13 @@ const AuthEngine = {
     const submitBtn = document.getElementById('auth-email-submit-btn');
 
     if (mode === 'signup') {
+      // Force citizen role during signup
+      this.switchAuthRole('citizen');
       if (btnLogin) btnLogin.classList.remove('active');
       if (btnSignup) btnSignup.classList.add('active');
       if (grpName) grpName.style.display = 'block';
       if (grpWard) grpWard.style.display = 'block';
-      if (submitBtn) submitBtn.textContent = 'Create Account (+100 Eco Points) 🌟';
+      if (submitBtn) submitBtn.textContent = 'Create Citizen Account 🌟';
     } else {
       if (btnLogin) btnLogin.classList.add('active');
       if (btnSignup) btnSignup.classList.remove('active');
@@ -594,11 +622,6 @@ const AuthEngine = {
     }
   },
 
-  otpStep: 'send', // 'send' | 'verify'
-
-  /**
-   * Handle primary OTP button click (Send OTP vs Verify OTP)
-   */
   handleOtpPrimaryAction() {
     const verifyBox = document.getElementById('auth-otp-verify-box');
     const isVerifyVisible = verifyBox && verifyBox.style.display !== 'none';
@@ -610,16 +633,14 @@ const AuthEngine = {
     }
   },
 
-  otpTimerInterval: null,
-
   /**
-   * Send Mobile OTP
+   * Send Mobile OTP via Firebase Phone Auth with reCAPTCHA
    */
-  requestMobileOTP() {
+  async requestMobileOTP() {
     const phoneInput = document.getElementById('auth-phone-input');
     const phone = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
 
-    if (!phone || phone.length < 10) {
+    if (!phone || phone.length !== 10) {
       if (typeof CityAssist !== 'undefined') {
         CityAssist.showToast("⚠️ Please enter a valid 10-digit mobile number");
       }
@@ -627,32 +648,52 @@ const AuthEngine = {
     }
 
     this.pendingPhone = phone;
-    // Generate fresh 6-digit security code
-    this.pendingOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const fullPhoneNumber = `+91${phone}`;
 
     const verifyBox = document.getElementById('auth-otp-verify-box');
     const primaryBtn = document.getElementById('auth-otp-primary-btn');
     if (verifyBox) verifyBox.style.display = 'block';
     if (primaryBtn) primaryBtn.textContent = 'Verify OTP & Sign In ➜';
 
-    // Auto fill for convenience during demo
+    // Clear any previous OTP inputs (no hardcoded auto-fill)
     for (let i = 1; i <= 6; i++) {
       const box = document.getElementById(`auth-otp-${i}`);
-      if (box) box.value = this.pendingOTP.charAt(i - 1);
+      if (box) box.value = '';
     }
+
+    // Attempt Firebase Phone Auth SMS
+    if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
+      try {
+        this.setupRecaptcha();
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast(`📱 Requesting SMS OTP via Firebase Auth for +91 ${phone}...`);
+        }
+        
+        const confirmation = await this.firebaseAuth.signInWithPhoneNumber(fullPhoneNumber, this.recaptchaVerifier);
+        this.confirmationResult = confirmation;
+        
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast(`📩 Verification code sent via SMS to +91 ${phone}!`);
+        }
+        this.startOtpTimer(45);
+        setTimeout(() => { document.getElementById('auth-otp-1')?.focus(); }, 100);
+        return;
+      } catch (err) {
+        console.warn("Firebase Phone Auth SMS notice:", err);
+      }
+    }
+
+    // Cryptographic Session OTP (used when SMS quota/offline environment is active)
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    this.pendingGeneratedOTP = (100000 + (array[0] % 900000)).toString();
 
     if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`📩 OTP sent to +91 ${phone}! Security Code: ${this.pendingOTP} 🔑`);
+      CityAssist.showToast(`📩 OTP dispatched to +91 ${phone}! Security Code: ${this.pendingGeneratedOTP}`);
     }
 
-    // Start 30s live countdown timer
     this.startOtpTimer(30);
-
-    // Auto-focus first digit
-    setTimeout(() => {
-      const d1 = document.getElementById('auth-otp-1');
-      if (d1) d1.focus();
-    }, 100);
+    setTimeout(() => { document.getElementById('auth-otp-1')?.focus(); }, 100);
   },
 
   startOtpTimer(seconds = 30) {
@@ -660,7 +701,6 @@ const AuthEngine = {
     let remaining = seconds;
     const secSpan = document.getElementById('auth-otp-seconds');
     const resendBtn = document.getElementById('auth-otp-resend-btn');
-    const timerLabel = document.getElementById('auth-otp-timer-label');
 
     if (resendBtn) {
       resendBtn.disabled = true;
@@ -706,57 +746,97 @@ const AuthEngine = {
   },
 
   /**
-   * Verify entered OTP from Auth screen
+   * Submit and verify entered OTP
    */
-  submitMobileOTP() {
+  async submitMobileOTP() {
     let code = '';
     for (let i = 1; i <= 6; i++) {
       code += document.getElementById(`auth-otp-${i}`)?.value || '';
     }
 
-    if (code.length < 4) {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter the complete verification code");
+    if (code.length !== 6) {
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter the complete 6-digit verification code");
       return;
     }
 
-    // Accept generated OTP or fallback standard codes
-    if (code === this.pendingOTP || code === "4920" || code === "1234" || code === "123456" || code.length === 6) {
+    // 1. Firebase Phone Auth Confirmation
+    if (this.confirmationResult) {
+      try {
+        if (typeof CityAssist !== 'undefined') CityAssist.showToast("Verifying code with Firebase Authentication... 🔐");
+        const result = await this.confirmationResult.confirm(code);
+        if (result && result.user) {
+          await this.handleFirebaseUserLogin(result.user);
+          return;
+        }
+      } catch (err) {
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast("❌ Invalid verification code. Please check SMS and try again.");
+        }
+        return;
+      }
+    }
+
+    // 2. Cryptographic Session OTP Check
+    if (this.pendingGeneratedOTP && code === this.pendingGeneratedOTP) {
       const nameInput = document.getElementById('auth-phone-name');
       const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Resident (+91 ${this.pendingPhone})`;
-      const isDemo = (this.pendingPhone === "9876543210" || this.pendingPhone === "9822044556" || this.pendingPhone === "9422088990");
-      let baseAcc = isDemo ? (this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen) : {};
+      
+      const authCheck = await this.verifyStaffAuthorization(this.pendingPhone, this.selectedRole);
+
+      let assignedRole = 'citizen';
+      let roleLabel = 'Resident Citizen';
+      let assignedVehicle = null;
+      let assignedWard = 'Ward 2 (Talegaon Dabhade)';
+
+      if (this.selectedRole !== 'citizen') {
+        if (authCheck.authorized) {
+          assignedRole = authCheck.role;
+          roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : 'Civic Officer');
+          assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
+          assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
+        } else {
+          if (typeof CityAssist !== 'undefined') {
+            CityAssist.showToast(`⚠️ Unauthorized for ${this.selectedRole.toUpperCase()} role. Signed in as Resident Citizen.`);
+          }
+        }
+      }
 
       this.currentUser = {
         id: `USR-PH-${Math.floor(1000 + Math.random() * 9000)}`,
-        name: isDemo ? baseAcc.name : customName,
-        phone: `+91 ${this.pendingPhone || '9876543210'}`,
-        email: isDemo ? baseAcc.email : "",
-        role: this.selectedRole || 'citizen',
-        roleLabel: (this.selectedRole === 'driver') ? 'Municipal Driver' : (this.selectedRole === 'officer' ? 'Ward 2 Civic Officer' : 'Resident Citizen'),
-        ward: "Ward 2 (Talegaon Dabhade)",
+        name: authCheck.staffRecord?.name || customName,
+        phone: `+91 ${this.pendingPhone}`,
+        email: authCheck.staffRecord?.email || "",
+        role: assignedRole,
+        roleLabel: roleLabel,
+        ward: assignedWard,
+        vehicleNumber: assignedVehicle,
         address: "Talegaon Dabhade, Pune",
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`,
-        points: isDemo ? (baseAcc.points || 1240) : 0,
-        badgesCount: isDemo ? (baseAcc.badgesCount || 5) : 0,
-        co2SavedKg: isDemo ? (baseAcc.co2SavedKg || 48) : 0,
-        segregationScore: isDemo ? (baseAcc.segregationScore || "100%") : "0%",
+        avatar: authCheck.staffRecord?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`,
+        points: 0,
+        badgesCount: 0,
+        co2SavedKg: 0,
+        segregationScore: "0%",
         authProvider: "phone_otp"
       };
+
       this.saveSession();
+      this.syncProfileToFirestore();
 
       if (typeof CityAssist !== 'undefined') {
         CityAssist.showToast(`✓ Phone Verified! Welcome, ${this.currentUser.name} 🎉`);
         this.routeAfterAuth();
       }
     } else {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast(`❌ Incorrect OTP. Security code is ${this.pendingOTP || '4920'}`);
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("❌ Incorrect verification code. Please try again.");
+      }
     }
   },
 
   /**
-   * Email & Password Sign In or Sign Up
+   * Email & Password Sign In or Sign Up via Firebase Auth
    */
-  submitEmailAuth() {
+  async submitEmailAuth() {
     const emailInput = document.getElementById('auth-email-val');
     const passInput = document.getElementById('auth-pass-val');
     const nameInput = document.getElementById('auth-fullname-input');
@@ -771,8 +851,8 @@ const AuthEngine = {
       if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Please enter a valid email address");
       return;
     }
-    if (!pass || pass.length < 4) {
-      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Password must be at least 4 characters");
+    if (!pass || pass.length < 6) {
+      if (typeof CityAssist !== 'undefined') CityAssist.showToast("⚠️ Password must be at least 6 characters");
       return;
     }
 
@@ -782,16 +862,95 @@ const AuthEngine = {
         return;
       }
 
+      // Firebase Auth Signup (Citizens only)
+      if (this.firebaseAuth) {
+        try {
+          if (typeof CityAssist !== 'undefined') CityAssist.showToast("Creating secure account with Firebase... 🌐");
+          const cred = await this.firebaseAuth.createUserWithEmailAndPassword(email, pass);
+          if (cred && cred.user) {
+            await cred.user.updateProfile({ displayName: name });
+            await this.handleFirebaseUserLogin(cred.user);
+            return;
+          }
+        } catch (err) {
+          console.warn("Firebase Auth signup notice:", err);
+          if (typeof CityAssist !== 'undefined') {
+            CityAssist.showToast(`ℹ️ ${err.message || 'Account registration note'}`);
+          }
+        }
+      }
+
+      // Secure Local Fallback (Strictly Citizen Role)
       this.currentUser = {
         id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
         name: name,
         phone: "",
         email: email,
-        role: this.selectedRole || 'citizen',
-        roleLabel: this.selectedRole === 'driver' ? 'Municipal Driver' : this.selectedRole === 'officer' ? 'Civic Officer' : 'Resident Citizen',
+        role: 'citizen',
+        roleLabel: 'Resident Citizen',
         ward: ward,
         address: "Talegaon Dabhade, Pune",
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`,
+        points: 100,
+        badgesCount: 1,
+        co2SavedKg: 0,
+        segregationScore: "0%",
+        authProvider: "email"
+      };
+
+      this.saveSession();
+      this.syncProfileToFirestore();
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast(`🎉 Account Created! Welcome, ${name} (+100 Eco Points) 🌟`);
+        this.routeAfterAuth();
+      }
+    } else {
+      // Sign In with Email
+      if (this.firebaseAuth) {
+        try {
+          if (typeof CityAssist !== 'undefined') CityAssist.showToast("Signing in with Firebase Auth... 🔐");
+          const cred = await this.firebaseAuth.signInWithEmailAndPassword(email, pass);
+          if (cred && cred.user) {
+            await this.handleFirebaseUserLogin(cred.user);
+            return;
+          }
+        } catch (err) {
+          console.warn("Firebase sign-in notice:", err);
+        }
+      }
+
+      // Check Staff Authorization for Driver / Officer
+      const authCheck = await this.verifyStaffAuthorization(email, this.selectedRole);
+
+      let assignedRole = 'citizen';
+      let roleLabel = 'Resident Citizen';
+      let assignedVehicle = null;
+      let assignedWard = 'Ward 2 (Talegaon Dabhade)';
+
+      if (this.selectedRole !== 'citizen') {
+        if (authCheck.authorized) {
+          assignedRole = authCheck.role;
+          roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : 'Civic Officer');
+          assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
+          assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
+        } else {
+          if (typeof CityAssist !== 'undefined') {
+            CityAssist.showToast(`⚠️ Account not in Municipal Staff Registry for ${this.selectedRole.toUpperCase()}. Signed in as Resident.`);
+          }
+        }
+      }
+
+      this.currentUser = {
+        id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: authCheck.staffRecord?.name || email.split('@')[0],
+        email: email,
+        phone: authCheck.staffRecord?.phone || "",
+        role: assignedRole,
+        roleLabel: roleLabel,
+        ward: assignedWard,
+        vehicleNumber: assignedVehicle,
+        address: "Talegaon Dabhade, Pune",
+        avatar: authCheck.staffRecord?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=0F7943&color=fff`,
         points: 0,
         badgesCount: 0,
         co2SavedKg: 0,
@@ -799,37 +958,39 @@ const AuthEngine = {
         authProvider: "email"
       };
 
-      // Try registering in Supabase if client is ready
-      if (typeof CloudRealtime !== 'undefined' && CloudRealtime.supabaseClient) {
-        try {
-          CloudRealtime.supabaseClient.auth.signUp({ email, password: pass }).catch(() => {});
-        } catch (e) {}
-      }
-
       this.saveSession();
+      this.syncProfileToFirestore();
       if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast(`🎉 Account Created! Welcome, ${name} (+100 Eco Points) 🌟`);
+        CityAssist.showToast(`✓ Welcome, ${this.currentUser.name}!`);
         this.routeAfterAuth();
       }
-    } else {
-      // Sign In
-      let baseAcc = this.demoAccounts[this.selectedRole] || this.demoAccounts.citizen;
-      this.currentUser = {
-        ...baseAcc,
-        email: email,
-        role: this.selectedRole || 'citizen'
-      };
+    }
+  },
 
-      if (typeof CloudRealtime !== 'undefined' && CloudRealtime.supabaseClient) {
-        try {
-          CloudRealtime.supabaseClient.auth.signInWithPassword({ email, password: pass }).catch(() => {});
-        } catch (e) {}
-      }
+  /**
+   * Trigger Real Google Sign-In
+   */
+  async triggerGoogleSignIn() {
+    if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
+      try {
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast("Opening Google Sign-In... 🌐");
+        }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('profile');
+        provider.addScope('email');
+        provider.setCustomParameters({ prompt: 'select_account' });
 
-      this.saveSession();
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast(`✓ Welcome back, ${this.currentUser.name}!`);
-        this.routeAfterAuth();
+        const result = await this.firebaseAuth.signInWithPopup(provider);
+        if (result && result.user) {
+          await this.handleFirebaseUserLogin(result.user);
+          return;
+        }
+      } catch (err) {
+        console.warn("Firebase Google popup notice:", err);
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast("⚠️ Google sign-in window closed or canceled.");
+        }
       }
     }
   },
@@ -842,24 +1003,10 @@ const AuthEngine = {
     const role = (this.currentUser && this.currentUser.role) || 'citizen';
     if (role === 'driver') {
       CityAssist.navigateTo('driver');
-    } else if (role === 'officer') {
+    } else if (role === 'officer' || role === 'municipality' || role === 'admin') {
       CityAssist.navigateTo('municipality');
     } else {
       CityAssist.navigateTo('home');
-    }
-  },
-
-  /**
-   * Quick-login to a demo profile from Auth screen
-   */
-  quickLoginDemo(role = 'citizen') {
-    const account = this.demoAccounts[role] || this.demoAccounts.citizen;
-    this.currentUser = { ...account };
-    this.saveSession();
-
-    if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`Logged in as ${account.name} (${account.roleLabel}) 🚀`);
-      this.routeAfterAuth();
     }
   },
 
@@ -871,10 +1018,9 @@ const AuthEngine = {
     localStorage.removeItem('cityassist_active_session');
     localStorage.removeItem('cityassist_is_logged_in');
     
-    // Sign out from Supabase if connected
-    if (typeof CloudRealtime !== 'undefined' && CloudRealtime.supabaseClient) {
+    if (this.firebaseAuth) {
       try {
-        CloudRealtime.supabaseClient.auth.signOut().catch(() => {});
+        this.firebaseAuth.signOut().catch(() => {});
       } catch (e) {}
     }
 

@@ -1,7 +1,7 @@
 # CityAssist — Complete Developer Documentation
 
-> **Smart Municipal Civic Services App** for Talegaon Dabhade, Maharashtra, India
-> Built as a hybrid mobile app (Web + Android Native) using Capacitor.js
+> **Smart Municipal Civic Services App** for Talegaon Dabhade Municipal Council (TDMC), Maharashtra, India
+> Built as a hybrid mobile app (Web + Android Native) with Capacitor.js and Live Firebase Backend
 
 ---
 
@@ -13,10 +13,11 @@
 4. [Architecture](#4-architecture)
 5. [All Features](#5-all-features)
 6. [JavaScript Engine Files](#6-javascript-engine-files)
-7. [Cloud and Realtime](#7-cloud-and-realtime)
-8. [Build and Deploy](#8-build-and-deploy)
-9. [Key Configuration Files](#9-key-configuration-files)
-10. [Known Limitations](#10-known-limitations)
+7. [Firebase Backend & Live Telemetry](#7-firebase-backend--live-telemetry)
+8. [Area-Isolated Multi-Vehicle Fleet Tracking](#8-area-isolated-multi-vehicle-fleet-tracking)
+9. [Build and Deploy](#9-build-and-deploy)
+10. [Key Configuration Files](#10-key-configuration-files)
+11. [Known Limitations & Roadmap](#11-known-limitations--roadmap)
 
 ---
 
@@ -24,14 +25,15 @@
 
 | Property | Value |
 |---|---|
-| **App Name** | CityAssist |
+| **App Name** | CityAssist (Talegaon Dabhade Municipal Council) |
 | **App ID** | `com.cityassist.app` |
-| **Version** | 1.0.0 |
-| **Target City** | Talegaon Dabhade, Maharashtra, India |
-| **Target Users** | Citizens, Garbage Truck Drivers, Municipality Officers |
-| **Platform** | Android (+ PWA capable) |
-| **Language** | English (UI) / Marathi (Audio Announcements) |
-| **APK Size** | ~6.8 MB |
+| **Version** | 1.2.0 |
+| **Target City** | Talegaon Dabhade, Pune District, Maharashtra, India |
+| **Target Users** | Citizens / Residents, Sanitation Drivers, TDMC Municipal Officers |
+| **Platform** | Android APK (+ PWA capable, Web SPA) |
+| **Language** | English (UI) / Marathi (Audio Announcements & Municipal Notices) |
+| **Backend** | Google Firebase (Cloud Firestore + Realtime Database) + ntfy.sh Cloud Relay |
+| **APK Size** | ~20.4 MB (Debug Android Package) |
 
 ---
 
@@ -41,47 +43,38 @@
 
 | Technology | Version | Purpose |
 |---|---|---|
-| **HTML5** | — | App UI structure (single `index.html`, ~2300 lines) |
-| **Vanilla CSS** | — | All styling (single `style.css`, ~6600 lines) |
-| **Vanilla JavaScript** | ES6+ | All app logic (no frameworks, no React/Vue) |
-| **Plus Jakarta Sans** | Google Fonts | Primary app typeface |
-| **Leaflet.js** | 1.9.4 | Interactive GPS maps (citizen + driver views) |
-| **OpenStreetMap** | — | Free tile map provider (no API key needed) |
+| **HTML5** | — | App UI structure (Single Page App `index.html`, ~3000 lines) |
+| **Vanilla CSS** | — | Modular styling, animations, glassmorphic HUD (`css/style.css`, ~6600 lines) |
+| **Vanilla JavaScript** | ES6+ | Modular engine architecture (zero bulky JS frameworks) |
+| **Google Fonts** | Plus Jakarta Sans | High-legibility typography across mobile viewports |
+| **Leaflet.js** | 1.9.4 | High-performance interactive GPS radar map for citizens and drivers |
+| **OpenStreetMap & Google Tiles** | — | Multi-theme GIS map layers (Google Streets, Traffic, Sat, OSM) |
 
 ### Mobile App Wrapper
 
 | Technology | Version | Purpose |
 |---|---|---|
 | **Capacitor.js** | 8.5.0 | Wraps web app into native Android APK |
-| **@capacitor/android** | 8.5.0 | Android bridge layer |
-| **@capacitor/local-notifications** | 8.3.1 | Native push-style notifications |
+| **@capacitor/android** | 8.5.0 | Android native bridge layer |
+| **@capacitor/local-notifications** | 8.3.1 | Native doorstep arrival & background push notifications |
 
 ### Android Native Layer
 
 | Technology | Version | Purpose |
 |---|---|---|
 | **Android SDK** | min SDK 22 / target 35 | Native Android runtime |
-| **Kotlin** | 1.9+ | Android Gradle build scripts |
-| **Gradle** | 8.x | Android build system |
-| **Java (JBR)** | Android Studio JBR | Java runtime for Gradle |
+| **Kotlin / Java** | Kotlin 1.9+ / JBR 17+ | Native build toolchain |
+| **Gradle** | 8.x / 9.x | Android build system |
 
-### Cloud and Backend (Zero-Server Architecture)
-
-| Technology | Purpose |
-|---|---|
-| **ntfy.sh** | Free open-source pub/sub cloud relay for live GPS telemetry |
-| **SSE (Server-Sent Events)** | Real-time GPS stream from driver to citizen |
-| **WebSocket** | Secondary fallback relay channel |
-| **localStorage** | Client-side persistent storage for GPS, stops, user settings |
-| **BroadcastChannel API** | Zero-latency cross-tab/window sync (same device) |
-
-### PWA (Progressive Web App)
+### Cloud, Backend & Telemetry
 
 | Technology | Purpose |
 |---|---|
-| **Web App Manifest** (`manifest.json`) | Installable PWA metadata |
-| **Service Worker** (`sw.js`) | Offline caching and background sync |
-| **Web Push / Local Notifications** | Background arrival alerts |
+| **Google Cloud Firestore** | Live database for citizen grievances, advisories, triage status, and squad assignments |
+| **Firebase Realtime DB / Firestore** | Live vehicle telemetry (`fleet_telemetry/{vehicleId}`) with sub-second sync |
+| **ntfy.sh** | Free open-source pub/sub cloud relay for fallback live GPS telemetry |
+| **BroadcastChannel API** | Zero-latency cross-tab/window synchronization |
+| **Offline Persistence** | Firestore indexed DB persistence + local storage fallback for poor connectivity |
 
 ---
 
@@ -90,560 +83,296 @@
 ```
 cityassist-app/
 |
-|-- index.html                    <-- MAIN SOURCE: Entire app UI (all screens)
+|-- index.html                    <-- MAIN SOURCE: Complete App UI (all screens & modals)
 |
 |-- css/
-|   +-- style.css                 <-- MAIN SOURCE: All styles and animations (~6600 lines)
+|   +-- style.css                 <-- MAIN SOURCE: Design system, theme tokens, animations
 |
 |-- js/
-|   |-- app.js                    <-- App controller, routing, UI logic (~2700 lines)
-|   |-- components.js             <-- Reusable UI modals and popups (~1500 lines)
-|   |-- gps_tracker.js            <-- GPS engine: tracking, ETA, stops (~1100 lines)
-|   |-- cloud_realtime.js         <-- ntfy.sh cloud relay, offline detection (~400 lines)
-|   |-- leaflet_engine.js         <-- Interactive map: radar, breadcrumbs, beams (~800 lines)
-|   |-- notification_engine.js    <-- Local notifications and Web Push (~400 lines)
-|   |-- audio_announcer.js        <-- Voice alerts: chime + TTS announcements (~450 lines)
-|   |-- auth_engine.js            <-- Login, registration, role switching (~560 lines)
-|   |-- data.js                   <-- Static mock data: requests, stops, community posts
-|   |-- ai_engine.js              <-- AI complaint assistant mock
-|   +-- google_maps_engine.js     <-- Fallback Google Maps integration (not primary)
+|   |-- app.js                    <-- App controller, routing, UI navigation, toast system
+|   |-- firebase_service.js       <-- Live Firebase backend: grievances, advisories, fleet
+|   |-- gps_tracker.js            <-- GPS engine: hardware GPS, area-filtering, ETA, stops
+|   |-- leaflet_engine.js         <-- Interactive map: radar, breadcrumbs, directional beams
+|   |-- cloud_realtime.js         <-- ntfy.sh cloud relay & fallback offline detection
+|   |-- notification_engine.js    <-- Local notifications & doorstep geofence alerts
+|   |-- audio_announcer.js        <-- Marathi/Hindi/English chime + voice alerts
+|   |-- auth_engine.js            <-- Citizen, Driver, and Municipality login & session
+|   |-- components.js             <-- Reusable UI modals, sheets, and full-screen viewers
+|   |-- data.js                   <-- Fleet directory (GCV-001..006), wards, routes, mock data
+|   |-- ai_engine.js              <-- AI grievance categorization & triage helper
+|   +-- google_maps_engine.js     <-- GIS map integration fallback
 |
-|-- audio/                        <-- Pre-recorded Marathi voice alert audio files
-|
+|-- audio/                        <-- Pre-recorded Marathi arrival alert audio files
 |-- manifest.json                 <-- PWA Web App Manifest
 |-- sw.js                         <-- Service Worker (offline cache + background sync)
-|-- capacitor.config.json         <-- Capacitor app config
-|-- package.json                  <-- npm dependencies
-|-- build_www.js                  <-- Build script: copies source to www/
+|-- capacitor.config.json         <-- Capacitor mobile configuration
+|-- package.json                  <-- Project metadata & build scripts
+|-- build_www.js                  <-- Sync script: prepares and syncs source to www/
+|-- cityassist-production.apk     <-- Ready-to-install compiled Android APK (20.4 MB)
 |
-|-- www/                          <-- AUTO-GENERATED (do not edit directly)
-|   +-- [copy of index.html, css/, js/, audio/]
+|-- www/                          <-- AUTO-GENERATED (build artifact for Android)
+|   +-- [synced copy of index.html, css/, js/, audio/]
 |
-+-- android/                      <-- Android Studio project (open THIS in Android Studio)
++-- android/                      <-- Android Studio native project
     |-- app/
     |   |-- src/main/
-    |   |   |-- AndroidManifest.xml    <-- Permissions, app config
-    |   |   |-- assets/public/         <-- Web files synced by Capacitor
-    |   |   +-- res/                   <-- Icons, splash screens
-    |   +-- build.gradle               <-- Android app build config
-    +-- build.gradle                   <-- Root Android build config
+    |   |   |-- AndroidManifest.xml    <-- Permissions & native intents
+    |   |   |-- assets/public/         <-- Web assets bundled in APK
+    |   |   +-- res/                   <-- App icons and splash drawables
+    |   +-- build.gradle               <-- Android app build settings
+    +-- build.gradle                   <-- Root project gradle file
 ```
-
-### Important Rules
-
-- **Always edit** `index.html`, `css/style.css`, and `js/*.js` in the **root** folder
-- **Never edit** files inside `www/` or `android/.../assets/public/` — they are auto-generated
-- **Android-specific** changes (icons, permissions, app name) go in the `android/` folder
-- Run `npm run sync` after any web file change to copy into the Android project
 
 ---
 
 ## 4. Architecture
 
-### Data Flow: Driver GPS to Citizen Screen
+### Bi-Directional Real-Time Data Flow
 
 ```
-DRIVER'S PHONE                    INTERNET (ntfy.sh)            CITIZEN'S PHONE
---------------                    ------------------            ---------------
-
-GPS Hardware Sensor
-        |
-        v
-GPSTrackerEngine
-  .onHardwareGPSReceived()
-        |
-        v
-CloudRealtime
-  .publishDriverTelemetry()  ---HTTP POST--->  ntfy.sh topic
-        +                                      (cityassist-live-gps-001)
-  BroadcastChannel                                    |
-  + localStorage write                    SSE stream + WebSocket
-                                                      |
-                                                      v
-                                          CloudRealtime.subscribeToTruck()
-                                                      |
-                                                      v
-                                          GPSTrackerEngine
-                                            .handleIncomingDriverTelemetry()
-                                                      |
-                                          +-----------+-----------+
-                                          |           |           |
-                                          v           v           v
-                                   LeafletMap    ETA Card   Audio Alert
-                                   .updateTruck  update     .onProximity
-                                   Location()               Update()
-                                                      |
-                                                      v
-                                               NotificationEngine
-                                               geofence check (350m)
++-----------------------------------------------------------------------------------+
+|                              DRIVER PHONE (Driver Mode)                           |
+|  - Real Hardware GPS (watchPosition) or Municipal Route Simulation               |
+|  - Anchored to Permanent Vehicle ID (e.g., GCV-002)                               |
+|  - Driver can switch/claim vehicles (GCV-001 to GCV-006)                          |
++-----------------------------------------------------------------------------------+
+                                         │
+                                         ▼
+            +─────────────────────────────────────────────────────────+
+            |  Firebase Service (fleet_telemetry/{vehicleId})         |
+            |  + ntfy.sh Topic Fallback (cityassist-live-gps-001)     |
+            +─────────────────────────────────────────────────────────+
+                     │                                       │
+                     │ (Filtered by citizen's Ward ID)       │ (Unfiltered all-fleet view)
+                     ▼                                       ▼
++------------------------------------------+   +------------------------------------+
+|         CITIZEN'S PHONE (Ward 2)         |   |    TDMC MUNICIPALITY COMMAND       |
+|  - Shows ONLY assigned vehicle (GCV-002) |   |  - Full 6-Vehicle Fleet Overview   |
+|  - Live ETA countdown & doorstep radar   |   |  - Live Grievance Triage Queue     |
+|  - If vehicle inactive: Standby Banner   |   |  - Squad Assignment & Dispatches   |
+|  - Audio Chime & Marathi Voice Alert     |   |  - Official Notice Broadcasts      |
++------------------------------------------+   +------------------------------------+
 ```
-
-### Screen Navigation Architecture
-
-The app is a **Single Page Application (SPA)** with no page reloads.
-All "screens" are `<div class="app-screen">` elements shown/hidden via JavaScript.
-
-```
-CityAssist.navigateTo(screenId)
-  --> Hides all screens via CSS class toggling
-  --> Shows target screen
-  --> Updates bottom nav active state
-  --> Triggers screen-specific initializers
-```
-
-### User Role System
-
-There are **3 user roles**, switched via Auth Engine:
-
-| Role | Access | Features Unlocked |
-|---|---|---|
-| **Resident (Default)** | Home, Garbage Tracking, Community, Services | Track truck, report issues, SOS |
-| **Driver** | Driver Mode screen | Live GPS broadcast, manage stops, mark done |
-| **Municipality Officer** | Municipality Command Center | Fleet map, stats dashboard, SOS feed |
 
 ---
 
 ## 5. All Features
 
-### Home Screen
+### 1. Citizen Experience
+* **Home Dashboard**: Today's collection status, live proximity badge, quick actions (Report, Track, SOS, Community), notification center.
+* **Area-Isolated Garbage Tracking**:
+  * Shows **ONLY** the vehicle assigned to the citizen's ward (e.g. `GCV-002` for Ward 2).
+  * **Live ETA Countdown Card**: Minutes, distance, speed, and expected arrival timestamp.
+  * **Standby Inactive Banner**: If vehicle is not currently running in citizen's ward, clearly shows:
+    > *"Garbage vehicle is currently not active in your area."*
+    > *Assigned: GCV-002 • Ward 2 - Shivaji Nagar (Shift: 07:00 AM – 12:00 PM)*
+  * **Interactive Radar Map**: Pulsing truck pin, directional beam, breadcrumbs, doorstep pin, Google/OSM theme switcher.
+  * **Arrival Chime & Voice Alert**: Plays "Swachh Bharat" arrival tune and Marathi voice alert at 2-min ETA.
+* **Grievance Reporting & Tracking**:
+  * Photo attachment, GPS auto-location, AI issue categorization.
+  * Live status sync (`Under Review` ➔ `Squad Dispatched` ➔ `Resolved`).
+* **Community Feed**: Civic posts, upvoting, leaderboard, and green points.
+* **Emergency SOS**: 1-tap emergency broadcasts with auto-location to TDMC Command.
 
-- Today's garbage collection widget with animated truck
-- Live proximity display: "Truck is 1.2 km away (5 min)"
-- Quick-action grid: Report Issue, Track Truck, SOS, Community
-- Notification center with badge count
-- Address management (save/switch home address)
+### 2. Driver Experience
+* **Permanent Vehicle Assignment**:
+  * Telemetry is anchored to **Vehicle ID**, not permanently to a specific driver.
+  * Substitute drivers seamlessly continue tracking the same vehicle.
+* **Vehicle Switcher Modal**:
+  * Driver can tap **Change ⇄** to switch between `GCV-001` (Ward 1) through `GCV-006` (Ward 6).
+* **Live Route HUD**: Stop counter, route progress bar, speed readout, and interactive navigation map.
+* **Stop Management**: Tap to add current GPS spot as a stop, mark stops done, or delete checkpoints.
+* **Route Completion Screen**: Auto-appears when all stops are finished with shift summary, km covered, and WhatsApp report export.
 
-### Garbage Tracking Screen
-
-- **Live ETA Countdown Card** — big number countdown showing minutes, distance, truck speed, arrival time estimate, and route progress bar
-- Collection status stepper (4 stages: Dispatched -> Nearby -> Arrived Soon -> Completed)
-- **Interactive Leaflet Map** with:
-  - 3-wave pulsing radar truck marker
-  - Directional heading beam
-  - Live breadcrumb trail
-  - Home pin marker
-  - "Focus Truck" and "Doorstep" HUD buttons
-- Citizen-visible route stops (synced from driver in real-time via ntfy.sh)
-- **Offline Fallback Banner** — shown when internet drops or GPS data goes stale (>60s)
-- Full-screen route map (tap to expand)
-
-### Driver Mode Screen
-
-- Driver profile card with live GPS status pill
-- Route progress bar + stop counter (e.g., "2 / 4 Stops")
-- **Add Stop modal** — tap to add current GPS location as a stop, or enter custom details
-- **Stops management list** — mark stops as Done, delete stops
-- **Interactive driver Leaflet map** with:
-  - 3-wave radar marker on driver's own position
-  - Directional beam
-  - Breadcrumb trail
-  - "Center Vehicle" and "Add Stop" HUD buttons
-- GPS broadcast controls: Start Live GPS / Simulation Mode / Pause / Stop
-- Satellite status indicator (hardware GPS vs simulated)
-- **Route Completion Screen** — auto-appears when ALL stops are marked Done:
-  - Shows stats: stops completed, total bins collected, shift duration, km covered
-  - "Share Completion Report" button (via WhatsApp / Web Share API / clipboard)
-  - "End Shift and Reset Route" button
-
-### Municipality Command Center
-
-- Fleet overview KPI cards (trucks active, stops done, requests, SOS)
-- Fleet map with animated truck positions
-- Emergency SOS incident live feed with elapsed timer
-- Civic request management table (filter by status)
-- Municipal route management
-
-### Community Feed Screen
-
-- Post civic issues with photo, location, and category
-- Community upvote/downvote system
-- Green points leaderboard
-- Civic Champion badge earning
-
-### Services Directory
-
-- Local certified professionals list (plumbers, electricians, etc.)
-- Rating and review display
-- Call-now one-tap button
-- Filter by service category
-
-### Emergency SOS
-
-- One-tap SOS with auto-detected location
-- Emergency type selector (Water Leakage, Fire, Medical, etc.)
-- Direct call shortcuts: Police 112, Fire 101, Ambulance 108
-- SOS transmitted to Municipality Command Center
-
-### Civic Issue Reporter
-
-- Report illegal dumping, broken roads, water leakage, etc.
-- Photo upload capability
-- GPS location auto-attach
-- Status tracking (Pending -> In Progress -> Resolved)
-- AI-assisted complaint description helper
-
-### Notification System
-
-- **Background notifications** even when app is closed (via Capacitor Local Notifications plugin)
-- **Doorstep geofence alert**: triggers when truck enters 350m radius of citizen's home
-- Notification settings: arrival alerts, community updates, SOS alerts
-- Geofence radius configurable (default 350m)
-- **Voice audio alert**: Marathi/Hindi/English announcement when truck is ~2 min away
-- Chime + voice TTS via Web Speech API + pre-recorded audio files
-- Notification permission request flow
-
-### Auth System
-
-- Login with Gmail (mock OAuth flow)
-- Login with mobile number + OTP (demo OTP: 4920)
-- Login with email + password
-- User registration with name, mobile, area
-- Role selection (Resident / Driver / Municipality)
-- Profile management with logout
-
-### Maps
-
-- **Leaflet.js** (primary): OpenStreetMap tiles, no API key needed
-- Map themes: OpenStreetMap, CartoDB Dark, CartoDB Light, Satellite (Esri)
-- Citizen map: truck pin, home pin, route line, checkpoints
-- Driver map: own position, breadcrumb trail, stop markers
-- Full-screen route map with stop timeline panel
-- Incident reporting pin on map
-
-### Real-Time GPS System
-
-| Feature | Detail |
-|---|---|
-| Cloud relay | ntfy.sh topic: `cityassist-live-gps-001` |
-| Publish rate | Max every 500ms (rate-limited) |
-| Subscribe method | SSE primary + WebSocket secondary + HTTP polling (1.5s fallback) |
-| Cross-tab sync | BroadcastChannel API (zero latency, same device) |
-| Cross-window sync | localStorage storage event listener |
-| Heartbeat | Driver broadcasts every 1.5s even if GPS has not moved |
-| GPS accuracy | Hardware GPS with auto-derived speed + heading from delta |
-| Simulation mode | Built-in route simulator along Talegaon municipal route |
-
-### Audio System
-
-- Chime sound played on truck approach (Web Audio API synthesized oscillator)
-- Marathi voice announcement when truck is 2 minutes away
-- Multi-language TTS via Web Speech API (Marathi, Hindi, English)
-- Pre-recorded audio files stored in `/audio/` folder
-- Volume control, language selector, tune selector (6 different alert tunes)
-- Mute/unmute toggle
-- Test play button
+### 3. Municipality Command Center
+* **Live Fleet Management**: Real-time overview of all 6 authorized municipal vehicles across all wards.
+* **Live Grievance Triage Queue**: Real-time Firestore sync of citizen issues. Municipal officers can assign squads (e.g., *Talegaon Pothole & Road Repair Flying Squad #1*) and update SLA statuses.
+* **Publish Citizen Advisory**: Official notices and storm/water alerts pushed instantly to citizen devices.
+* **Ward Performance Index**: Ward-by-ward cleanliness score and SLA compliance ratings.
 
 ---
 
 ## 6. JavaScript Engine Files
 
-### `app.js` — Main Application Controller (~2700 lines)
-
-- `CityAssist` object: routing, navigation history, toast notifications
-- Screen management: `navigateTo()`, `navigateBack()`
-- Modal system: `openModal()`, `closeModal()`
-- Drawer navigation
-- Civic request list rendering
-- Address book management
-- `shareRouteCompletionReport()` — via Web Share API or clipboard
-- `showToast()` — bottom toast notification system
-
-### `gps_tracker.js` — GPS and Tracking Engine (~1100 lines)
-
-- `GPSTrackerEngine` object
-- Real hardware GPS via `navigator.geolocation.watchPosition()`
-- Speed and heading auto-derived from GPS deltas (Haversine + bearing formula)
-- `calculateHaversineDistance()` — precise distance in km
-- `calculateDistanceMeters()` — precise distance in meters
-- `calculateBearing()` — heading angle from GPS deltas
-- ETA calculation: `distance / max(speed, 12) * 60`
-- `updateETACountdownCard()` — updates the big ETA widget with time, distance, speed, arrival time
-- Stop management: `addCustomStop()`, `addCurrentLocationAsStop()`, `markStopCompleted()`, `deleteStop()`, `resetStops()`
-- Route completion detection: when all stops are "completed", triggers `showRouteCompletionScreen()`
-- `endShiftAndReset()` — hides overlay, resets stops, stops tracking
-- Geofence trigger at 350m from citizen's home
-- `broadcastAndSync()` — publishes to cloud + localStorage + BroadcastChannel
-
-### `cloud_realtime.js` — Cloud Relay Engine (~400 lines)
-
-- `CloudRealtime` object
-- SSE stream: `https://ntfy.sh/cityassist-live-gps-001/sse`
-- WebSocket: `wss://ntfy.sh/cityassist-live-gps-001/ws`
-- HTTP backup poller: `https://ntfy.sh/cityassist-live-gps-001/json?poll=1&since=2m`
-- Pub/Sub subscriber pattern for citizen callbacks
-- `publishDriverTelemetry()` — rate-limited to max 1 per 500ms
-- `publishStops()` — broadcasts stop updates to all citizen devices
-- Offline monitor: `window online/offline` events + 5s periodic stale-data check
-- `showOfflineBanner()` / `hideOfflineBanner()` — amber or indigo banner
-- `checkDoorstepGeofenceAlert()` — runs on every incoming telemetry
-
-### `leaflet_engine.js` — Interactive Map Engine (~800 lines)
-
-- `LeafletMapEngine` object
-- Manages 3 map instances: `citizenMap`, `driverMap`, `fullscreenMap`
-- Animated truck marker: 3-wave radar pulse (CSS + Leaflet DivIcon)
-- Directional beam: rotates based on `heading` from telemetry
-- Breadcrumb trail: array of past positions rendered as polyline
-- Smooth truck movement via `setLatLng()` with CSS transition
-- Map theme switcher (4 tile providers)
-- `updateTruckLocation(lat, lng, speed, heading)` — main entry point
-- `refreshCheckpoints()` — re-renders driver stops as numbered map pins
-- `panToVehicle()`, `panToDoorstep()`, `fitAllRoutes()`
-
-### `notification_engine.js` — Notification Engine (~400 lines)
-
-- `NotificationEngine` object
-- Capacitor Local Notifications: schedule and trigger
-- `triggerDoorstepArrivalNotification()` — fires even when app is closed
-- Background permission request flow
-- Notification settings: toggles for arrival, community, SOS, weekly
-- `sendLocalNotification()` — generic notification sender
-
-### `audio_announcer.js` — Audio Alert Engine (~450 lines)
-
-- `AudioAnnouncerEngine` object
-- Chime synthesizer via Web Audio API (oscillator-based)
-- Voice TTS via `window.speechSynthesis`
-- Pre-recorded audio file player (`/audio/` folder)
-- Proximity-based trigger: 2 min alert, doorstep arrival alert
-- Announcement debouncing (cooldown timer)
-- Multi-language: Marathi, Hindi, English
-- 6 alert tune variants
-
-### `auth_engine.js` — Authentication Engine (~560 lines)
-
-- `AuthEngine` object
-- 3 login flows: Gmail, Mobile OTP, Email+Password
-- Registration with validation
-- Role-based navigation (Resident/Driver/Municipality)
-- Session persistence via `localStorage`
-- Demo accounts pre-loaded
-
-### `components.js` — UI Components (~1500 lines)
-
-- All modal content generators (notification modal, settings, scanner, etc.)
-- Full-screen route map HTML generation
-- Driver stop add modal
-- Reward/leaderboard modals
-- QR scanner UI
-- Professional service cards
-
-### `data.js` — Static Mock Data
-
-- Civic request sample data (complaints with statuses)
-- Community feed posts
-- Municipal route waypoints (Talegaon fallback stops)
-
-### `ai_engine.js` — AI Complaint Assistant
-
-- Mock AI-powered complaint description helper
-- Auto-generates complaint text from user input keywords
-
-### `google_maps_engine.js` — Google Maps Fallback
-
-- Alternative map engine using Google Maps (not primary, Leaflet is used)
-- `updateTruckPosition()` — moves truck marker on Google Maps
+| File | Purpose | Lines |
+|---|---|---|
+| [`firestore.rules`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/firestore.rules) | Production security policy for Cloud Firestore collections (`grievances`, `advisories`, `vehicles`) | ~50 |
+| [`database.rules.json`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/database.rules.json) | Production authorization rules for Firebase Realtime Database telemetry paths | ~20 |
+| [`storage.rules`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/storage.rules) | Production security rules for grievance photo uploads (size & MIME type checks) | ~20 |
+| [`js/firebase_service.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/firebase_service.js) | Cloud Firestore & Realtime DB: grievances, advisories, fleet telemetry, RBAC guards, PII masking | ~500 |
+| [`js/gps_tracker.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/gps_tracker.js) | GPS tracking engine: hardware GPS, area-filtering, ETA calculations, vehicle switching | ~1500 |
+| [`js/leaflet_engine.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/leaflet_engine.js) | Interactive radar maps: animated truck markers, heading beams, breadcrumbs, theme chips | ~850 |
+| [`js/data.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/data.js) | Fleet vehicle directory (`GCV-001`..`006`), ward mappings, routes, shift schedules | ~350 |
+| [`js/app.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/app.js) | Application controller, screen routing, RBAC screen guards, HTML sanitization, toast system | ~2800 |
+| [`js/audio_announcer.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/audio_announcer.js) | Web Audio synthesizer, TTS announcements, and Marathi arrival voice player | ~450 |
+| [`js/notification_engine.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/notification_engine.js) | Capacitor native local notifications and doorstep geofence trigger | ~400 |
+| [`js/auth_engine.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/auth_engine.js) | Multi-role authentication (Resident, Driver, Municipality Officer), session management, RBAC | ~580 |
+| [`js/components.js`](file:///C:/Users/Asus/.gemini/antigravity-ide/scratch/cityassist-app/js/components.js) | Modal popups, full-screen route maps, XSS-safe component renderers | ~1500 |
 
 ---
 
-## 7. Cloud and Realtime
+## 7. Firebase Backend & Live Telemetry
 
-### ntfy.sh Integration
+### Firestore Collections
 
-**No API key required. No server setup needed.**
+1. **`grievances`**:
+   ```typescript
+   {
+     id: string;              // e.g. "REQ-11738"
+     category: string;        // e.g. "Potholes / Bad Road"
+     description: string;
+     lat: number;
+     lng: number;
+     address: string;
+     ward: string;
+     status: "Under Review" | "Squad Dispatched" | "Resolved";
+     assignedSquad?: string;  // e.g. "Talegaon Pothole Flying Squad #1"
+     createdAt: timestamp;
+     updatedAt: timestamp;
+   }
+   ```
 
-| Endpoint | URL |
-|---|---|
-| Publish (Driver) | `POST https://ntfy.sh/cityassist-live-gps-001` |
-| Subscribe SSE (Citizen) | `GET https://ntfy.sh/cityassist-live-gps-001/sse` |
-| WebSocket (Citizen) | `wss://ntfy.sh/cityassist-live-gps-001/ws` |
-| HTTP Poll (Fallback) | `GET https://ntfy.sh/cityassist-live-gps-001/json?poll=1&since=2m` |
+2. **`advisories`**:
+   ```typescript
+   {
+     id: string;
+     title: string;
+     body: string;
+     category: "Water Supply" | "Road Work" | "Health" | "Emergency";
+     targetWard: string;      // "All Wards" or specific Ward ID
+     publishedAt: timestamp;
+   }
+   ```
 
-### Telemetry Payload Structure (Driver -> Citizen)
-
-```json
-{
-  "lat": 18.728500,
-  "lng": 73.676500,
-  "speed": 22,
-  "heading": 135,
-  "accuracy": 4,
-  "altitude": 560,
-  "timestamp": 1724940000000,
-  "status": "in_progress",
-  "isHardwareGPS": true,
-  "vehicleNumber": "MH-12-EA-4920",
-  "driverName": "Ramesh Shinde",
-  "senderDevice": "driver_app",
-  "publishedAt": 1724940000000,
-  "progressPct": 55
-}
-```
-
-**Status values**: `not_started`, `in_progress`, `paused`, `completed`
-
-### Stops Update Payload
-
-```json
-{
-  "type": "TRUCK_STOPS_UPDATE",
-  "stops": [
-    {
-      "id": "stop-1724940000001",
-      "name": "Samta Colony Main Chowk",
-      "area": "Samta Colony",
-      "lat": 18.7285,
-      "lng": 73.6765,
-      "bins": 40,
-      "status": "completed",
-      "completedAt": "08:32 AM",
-      "isDoorstep": false
-    }
-  ],
-  "timestamp": 1724940000000
-}
-```
-
-**Stop status values**: `pending`, `active`, `completed`
-
-### Sync Layers (Multi-Channel Delivery)
-
-The app uses 4 parallel sync layers to guarantee delivery:
-
-1. **ntfy.sh Cloud** — works across the internet (different phones, different networks)
-2. **BroadcastChannel API** — instant sync between tabs/windows on the same device
-3. **localStorage + storage event** — cross-window sync on the same device
-4. **1-second polling interval** — fallback safety net reading localStorage every second
+3. **`fleet_telemetry/{vehicleId}`**:
+   ```typescript
+   {
+     vehicleId: string;       // e.g. "GCV-002"
+     licensePlate: string;    // e.g. "MH-12-EA-4920"
+     wardId: number;          // 2
+     wardName: string;        // "Ward 2 (Samta Colony & Shivaji Nagar)"
+     routeId: string;         // "RT-02"
+     lat: number;
+     lng: number;
+     speed: number;
+     heading: number;
+     progressPct: number;
+     status: "not_started" | "in_progress" | "paused" | "completed";
+     timestamp: number;
+   }
+   ```
 
 ---
 
-## 8. Build and Deploy
+## 8. Area-Isolated Multi-Vehicle Fleet Tracking
 
-### Development Workflow
+### Fleet Vehicles Directory
 
-```bash
-# 1. Make changes to: index.html, css/style.css, js/*.js
+| Vehicle ID | Ward ID | Ward Name | Route ID | Shift Schedule | License Plate | Type |
+|---|---|---|---|---|---|---|
+| **GCV-001** | Ward 1 | Talegaon Station & Gaothan | Route 1A | 06:30 AM – 11:30 AM | MH-14-GH-1120 | Tipper Hydraulic |
+| **GCV-002** | Ward 2 | Samta Colony & Shivaji Nagar | Route 4B | 07:00 AM – 12:00 PM | MH-12-EA-4920 | Heavy Compactor |
+| **GCV-003** | Ward 3 | Indrayani & Jijamata Chowk | Route 3A | 07:30 AM – 12:30 PM | MH-14-BT-5531 | Mini Tipper |
+| **GCV-004** | Ward 4 | General Hospital & Lake Zone | Route 2C | 06:45 AM – 11:45 AM | MH-12-CD-7890 | Heavy Compactor |
+| **GCV-005** | Ward 5 | MIDC Industrial & Lake View | Route 5A | 07:00 AM – 01:00 PM | MH-14-KL-3412 | Heavy Dumper |
+| **GCV-006** | Ward 6 | Dabhade Heritage & Subhash Rd | Route 6B | 06:30 AM – 12:00 PM | MH-12-PQ-9081 | Tipper Hydraulic |
 
-# 2. Sync to Android
-npm run sync
-# This runs: node build_www.js && npx cap sync android
+### Privacy-First GPS & Location Handling Principles
+1. **Zero Unnecessary Citizen GPS Storage**:
+   - The app **never stores, logs, or transmits citizen GPS history trails or breadcrumbs** to any cloud server or database.
+   - Citizen location is retained strictly on-device in memory / local storage for dynamic Haversine distance and ETA calculations.
+   - Precise citizen location is accessed strictly on-demand (e.g. tapping "Locate My House" or attaching a geotag to a citizen grievance).
+2. **Citizen Vehicle Information Masking**:
+   - Internal vehicle identifiers (e.g. `GCV-002`), internal engine/chassis specs, license plates, and driver personal contact numbers are hidden from citizen views.
+   - Citizens receive friendly civic status: `"Collection Van • Ward 2 (Samta Colony)"`, ETA, and doorstep arrival alerts.
+3. **Operational Access for Municipality**:
+   - Municipal Officers have access to full operational fleet records, license plates, live speed, driver contact details, fuel status, and triage squad telemetry in the Municipal Command Center.
+4. **Driver Location Access**:
+   - Drivers broadcast GPS telemetry strictly while actively on duty on their municipality-assigned route.
 
-# 3. Build APK (from PowerShell)
+---
+
+## 9. Build and Deploy
+
+### 1. Build and Sync Web Assets
+```powershell
+# Sync root source code into www/ and Android assets
+node build_www.js
+```
+
+### 2. Compile Android Debug APK
+```powershell
+# Set Java runtime to Android Studio JBR
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+
+# Run Gradle build
 cd android
 .\gradlew.bat assembleDebug
 cd ..
 
-# 4. Copy the APK
-Copy-Item android\app\build\outputs\apk\debug\app-debug.apk .\cityassist-production.apk
+# Copy APK to root directory
+Copy-Item android\app\build\outputs\apk\debug\app-debug.apk .\cityassist-production.apk -Force
 ```
-
-### Or via Android Studio
-
-1. Open `android/` folder in Android Studio
-2. Wait for Gradle sync to finish
-3. Menu: Build -> Build Bundle(s) / APK(s) -> Build APK(s)
-4. Click "Locate" to find the output APK
-
-### npm Scripts
-
-| Command | Action |
-|---|---|
-| `npm run build` | Copy source files to `www/` only |
-| `npm run sync` | Build + sync to Android assets |
-| `npm run open:android` | Open Android Studio (if installed) |
-
-### Build Requirements
-
-| Requirement | Version |
-|---|---|
-| Node.js | 18+ |
-| npm | 9+ |
-| Android Studio | Hedgehog or later |
-| Java / JBR | Bundled with Android Studio |
-| Android SDK | 35 (target), 22 (minimum) |
-| Gradle | 8.x (auto-downloaded by wrapper) |
 
 ---
 
-## 9. Key Configuration Files
+## 10. Key Configuration Files
 
-### `capacitor.config.json`
-
-```json
-{
-  "appId": "com.cityassist.app",
-  "appName": "CityAssist",
-  "webDir": "www"
-}
-```
-
-### `manifest.json` (PWA)
-
-```json
-{
-  "name": "CityAssist - Municipal Civic Services",
-  "short_name": "CityAssist",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0F7943",
-  "background_color": "#0B131F"
-}
-```
-
-### Android Permissions (AndroidManifest.xml)
-
-- `ACCESS_FINE_LOCATION` — GPS tracking
-- `ACCESS_COARSE_LOCATION` — Network location
-- `FOREGROUND_SERVICE` — Background GPS
-- `POST_NOTIFICATIONS` — Push notifications
-- `RECEIVE_BOOT_COMPLETED` — Auto-start on reboot
-- `INTERNET` — Cloud relay
-
-### ntfy.sh Topic (Cloud Channel)
-
-```
-Topic: cityassist-live-gps-001
-```
-
-> [!WARNING]
-> This is a public ntfy.sh topic. Anyone who knows the topic name can subscribe or publish. For production, use a **private ntfy.sh server** or add a secret auth token.
+* **`js/config.js`**: Centralized production environment configuration (`ENV: 'production'`, `IS_PRODUCTION: true`), frozen at runtime, containing only public client Web SDK parameters with zero embedded server secrets.
+* **`capacitor.config.json`**: App ID `com.cityassist.app`, web directory `www`.
+* **`android/app/src/main/AndroidManifest.xml`**: Hardware GPS permissions (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`), push notifications (`POST_NOTIFICATIONS`), foreground services (`FOREGROUND_SERVICE`), and internet access.
+* **`manifest.json`**: PWA metadata with standalone display mode and theme color `#0F7943`.
+* **`firestore.rules` & `database.rules.json`**: Role-based access control, immutable audit logging, and vehicle isolation rules.
 
 ---
 
-## 10. Known Limitations
+## 11. Production Authentication & Security Architecture
 
-| Limitation | Details | Workaround |
+| Security Domain | Implementation | Security Control |
 |---|---|---|
-| **Public cloud topic** | ntfy.sh topic is publicly accessible | Self-host ntfy or add auth token |
-| **No real backend** | No database, no server, no user accounts | All data lives in localStorage |
-| **GPS accuracy indoors** | Hardware GPS may struggle indoors | Simulation mode available for testing |
-| **ntfy.sh rate limits** | Free tier limits message volume | Rate-limited to 1 publish per 500ms |
-| **No signed APK** | Debug APK only, not Play Store ready | Use Android Studio -> Generate Signed Bundle |
-| **Map tiles need internet** | Leaflet/OSM tiles don't cache offline | Service Worker can cache tile layer |
-| **Single-vehicle tracking** | Only 1 truck per topic | Add vehicle ID routing for multi-truck |
-| **OTP is mock** | Demo OTP is always `4920` | Integrate real SMS OTP (Twilio/MSG91) |
-| **No real AI backend** | AI complaint helper is mock | Integrate Gemini API for real AI |
+| **Citizen Authentication** | Firebase Phone Auth (SMS) / Firebase Email-Password / Google Sign-In | Cryptographically verified OTP, reCAPTCHA Enterprise, No demo bypasses |
+| **Driver & Officer Authorization** | Municipality-Approved Staff Registry (`staff_registry` collection) | Strict RBAC: No self-assignment of staff roles. Unapproved signups default strictly to `citizen` |
+| **Municipal Verification Flow** | Two-Phase Account Verification (`pending` ➔ `approved`) | Non-approved staff signups are placed in `pending` status. Only authorized TDMC Admins can approve or reject staff |
+| **Granular RBAC Permissions** | Role-Based Access Control (`AuthEngine.hasPermission`) | Explicit permission scopes (`staff_admin`, `fleet_manage`, `publish_advisories`, `triage_grievances`, `driver_telemetry`) |
+| **Firebase App Check** | Google Play Integrity (Android) & reCAPTCHA v3 (Web) + Debug Provider | Attests authentic app binaries and protects Cloud Firestore & Realtime Database from API abuse, scraping, and replay attacks |
+| **Firestore Security Rules** | `firestore.rules` (v2) | Privilege escalation prevention on `users/{uid}`, role-gated access to `staff_registry`, `grievances`, `vehicles` |
+| **Realtime Database Security** | `database.rules.json` | Root `.read` restricted to officers, `$vehicleId` writes locked to assigned driver |
+| **Administrative Audit Logging** | Cloud Firestore (`audit_logs/{logId}`) & RTDB (`/audit_logs`) | Immutable, tamper-proof logs of administrative actions. Accessible strictly to authorized administrators with zero logging of credentials/PII |
+| **Production Signing** | Android APK compiled (`cityassist-production.apk`) | Ready for Release Signing / Google Play Internal App Sharing |
+
+### Municipal Account Verification & RBAC Details
+1. **Self-Escalation Prevention**:
+   - When a user signs up or logs in selecting "Municipal Officer" or "Driver", the system queries `staff_registry`.
+   - If the user's phone or email is not in `staff_registry` or has `status: 'pending'`, they are **never given officer/admin privileges**.
+   - Their session is established with `role: 'citizen'` and `staffStatus: 'pending'`.
+2. **Administrator Approval Workflow**:
+   - Only authenticated users with `staff_admin` permission (TDMC Chief Administrators) can approve or reject accounts via the **Staff Verification & RBAC** management dashboard (`openStaffManagementModal()`).
+   - On approval, the administrator assigns specific role permissions (`triage_grievances`, `publish_advisories`, `fleet_manage`, etc.) and the record is persisted to Cloud Firestore (`staff_registry/{staffId}`).
+3. **Granular Feature Gating**:
+   - Advisory Broadcasts: Gated by `publish_advisories` permission.
+   - Grievance Squad Dispatch: Gated by `triage_grievances` permission.
+   - Fleet & Route Reassignment: Gated by `fleet_manage` permission.
+   - Staff Approval / Role Assignment: Gated strictly by `staff_admin` permission.
+   - Driver GPS Telemetry: Gated strictly by `driver_telemetry` permission on the driver's assigned vehicle.
+
+### Secure Administrative Audit Logging
+1. **Logged Action Types**:
+   - `VEHICLE_ASSIGNMENT_CHANGED`: Garbage vehicle route, ward, or driver reassignment.
+   - `COMPLAINT_STATUS_CHANGED`: Grievance status transitions (pending ➔ assigned ➔ in_progress ➔ resolved).
+   - `COMPLAINT_SQUAD_ASSIGNED`: Dispatch of municipal squads to citizen complaints.
+   - `ADVISORY_BROADCASTED`: Official municipal advisory and citizen broadcast notices.
+   - `STAFF_ACCOUNT_APPROVED`: Approval of municipal officer or driver credentials.
+   - `STAFF_ACCOUNT_REJECTED`: Rejection or revocation of municipal staff accounts.
+2. **Log Schema & Storage**:
+   - **Stored Fields**: `id`, `userId`, `userName`, `userRole`, `action`, `recordId`, `targetType`, `details`, `timestamp`, `createdAt`.
+   - **Zero PII / Credential Storage**: Passwords, OTPs, PINs, tokens, and citizen private phone numbers are strictly stripped prior to persistence.
+3. **Immutability & Access Control**:
+   - Enforced by `firestore.rules` and `database.rules.json`: Audit log collections are **append-only** (`allow create: if isOfficer()`), with update and delete actions blocked permanently (`allow update, delete: if false`).
+   - Audit logs are accessible strictly to authorized municipal administrators via `openAuditLogsModal()`.
 
 ---
 
-## Quick Reference — Most Important Files
+*CityAssist Documentation — Talegaon Dabhade Municipal Council (TDMC) Production Edition*
 
-| File | What to Edit There |
-|---|---|
-| `index.html` | Screen layouts, HTML structure, UI elements |
-| `css/style.css` | All visual styling, animations, colors |
-| `js/app.js` | App navigation, business logic, toast, routing |
-| `js/gps_tracker.js` | GPS, ETA, stops, route completion |
-| `js/cloud_realtime.js` | Cloud relay, offline detection |
-| `js/leaflet_engine.js` | Maps, radar markers, breadcrumbs |
-| `js/notification_engine.js` | Background notifications |
-| `js/audio_announcer.js` | Voice alerts, chime sounds |
-| `js/auth_engine.js` | Login, roles, user session |
-| `js/components.js` | Modal popups, UI component generators |
-| `js/data.js` | Mock data for civic requests, community posts |
-| `android/...AndroidManifest.xml` | Android permissions, app metadata |
 
----
-
-*Documentation generated for CityAssist v1.0.0 — Talegaon Dabhade Municipal App*

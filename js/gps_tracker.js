@@ -13,7 +13,7 @@ const GPSTrackerEngine = {
     accuracy: 5
   },
 
-  // 2. Driver/Vehicle Live Telemetry (Updated continuously in Driver Mode)
+  // 2. Driver/Vehicle Live Telemetry (Updated continuously in Driver Mode and linked to permanent Vehicle ID)
   driverTelemetry: {
     lat: 18.7340,
     lng: 73.6700,
@@ -24,9 +24,15 @@ const GPSTrackerEngine = {
     status: 'not_started', // 'not_started' | 'in_progress' | 'paused' | 'completed'
     timestamp: Date.now(),
     isHardwareGPS: false,
+    vehicleId: "GCV-002",
     vehicleNumber: "MH-12-EA-4920",
+    vehicleType: "Compactor 6-Ton",
+    wardId: 2,
+    wardName: "Ward 2 (Samta Colony & Shivaji Nagar)",
+    routeId: "Route 4B",
     driverName: "Ramesh Shinde",
-    routeId: "Route 2A",
+    driverId: "PMC-DRV-884",
+    driverPhone: "9822088401",
     progressPct: 0
   },
 
@@ -186,6 +192,26 @@ const GPSTrackerEngine = {
       CloudRealtime.subscribeToTruck((cloudTelemetry) => {
         if (cloudTelemetry && cloudTelemetry.lat && cloudTelemetry.lng) {
           this.handleIncomingDriverTelemetry(cloudTelemetry);
+        }
+      });
+    }
+
+    // 6.1 Backend-Enforced Vehicle Document Listener:
+    // Subscribes strictly to the single assigned vehicle document for the citizen's ward in Firebase
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.listenToAssignedVehicle) {
+      const wardId = this.resolveCitizenWard();
+      FirebaseService.listenToAssignedVehicle(wardId, (vehicleDoc, isActive) => {
+        if (vehicleDoc && isActive && vehicleDoc.telemetry) {
+          this.handleIncomingDriverTelemetry({
+            ...vehicleDoc.telemetry,
+            vehicleId: vehicleDoc.vehicleId,
+            wardId: vehicleDoc.wardId,
+            routeId: vehicleDoc.routeId,
+            status: vehicleDoc.status || 'in_progress',
+            driverName: vehicleDoc.currentDriver ? vehicleDoc.currentDriver.name : ''
+          });
+        } else if (!isActive && vehicleDoc) {
+          this.renderStandbyInactiveState(vehicleDoc);
         }
       });
     }
@@ -609,15 +635,21 @@ const GPSTrackerEngine = {
    */
   broadcastAndSync(telemetry) {
     this.driverTelemetry = telemetry;
+    const vehicleId = telemetry.vehicleId || (CityData.driver && CityData.driver.assignedVehicleId) || 'GCV-002';
 
-    // 1. Publish to Supabase / Firebase Cloud Realtime
+    // 1. Publish to Firebase Firestore by Permanent Vehicle ID
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.publishVehicleTelemetry) {
+      FirebaseService.publishVehicleTelemetry(vehicleId, telemetry);
+    }
+
+    // 2. Publish to Supabase / Realtime Cloud
     if (typeof CloudRealtime !== 'undefined') {
       try {
         CloudRealtime.publishDriverTelemetry(telemetry);
       } catch (e) {}
     }
 
-    // 2. Broadcast to other tabs/windows
+    // 3. Broadcast to other tabs/windows
     if (this.broadcastChannel) {
       try {
         this.broadcastChannel.postMessage({
@@ -627,13 +659,199 @@ const GPSTrackerEngine = {
       } catch (e) {}
     }
 
-    // 3. Write to local database / storage
+    // 4. Write to local database / storage
     try {
       localStorage.setItem('cityassist_driver_gps', JSON.stringify(telemetry));
     } catch (e) {}
 
-    // 4. Update all active Citizen & Driver UI components immediately
+    // 5. Update all active Citizen & Driver UI components immediately
     this.handleIncomingDriverTelemetry(telemetry);
+  },
+
+  /**
+   * Resolve Citizen's Ward ID from current address or active profile
+   */
+  resolveCitizenWard() {
+    const loc = this.citizenLocation || {};
+    const activeAddr = (typeof CityData !== 'undefined' && CityData.addresses) 
+      ? (CityData.addresses.find(a => a.isDefault) || CityData.addresses[0]) 
+      : null;
+    const addrText = ((activeAddr ? (activeAddr.address + ' ' + activeAddr.label) : '') + ' ' + (loc.address || loc.name || '')).toLowerCase();
+
+    if (addrText.includes('station') || addrText.includes('ward 1') || addrText.includes('market') || addrText.includes('bazaar')) return 1;
+    if (addrText.includes('samta') || addrText.includes('ward 2') || addrText.includes('shivaji')) return 2;
+    if (addrText.includes('gaothan') || addrText.includes('ward 3') || addrText.includes('indrayani') || addrText.includes('maratha')) return 3;
+    if (addrText.includes('model') || addrText.includes('ward 4') || addrText.includes('lake')) return 4;
+    if (addrText.includes('midc') || addrText.includes('ward 5') || addrText.includes('industrial') || addrText.includes('tech park')) return 5;
+    if (addrText.includes('vadgaon') || addrText.includes('ward 6') || addrText.includes('somatane')) return 6;
+
+    if (typeof CityData !== 'undefined' && CityData.user && CityData.user.ward) {
+      const wStr = CityData.user.ward.toLowerCase();
+      for (let i = 1; i <= 6; i++) {
+        if (wStr.includes(`ward ${i}`)) return i;
+      }
+    }
+    return 2; // Default to Ward 2 (Samta Colony)
+  },
+
+  /**
+   * Get the Vehicle entity assigned to the Citizen's Ward
+   */
+  getCitizenAssignedVehicle() {
+    const wardId = this.resolveCitizenWard();
+    if (typeof CityData !== 'undefined' && CityData.municipality && CityData.municipality.fleetVehicles) {
+      const match = CityData.municipality.fleetVehicles.find(v => v.wardId === wardId);
+      if (match) return match;
+    }
+    return {
+      vehicleId: "GCV-002",
+      licensePlate: "MH-12-EA-4920",
+      wardId: 2,
+      wardName: "Ward 2 (Samta Colony & Shivaji Nagar)",
+      routeId: "Route 4B",
+      schedule: "07:00 AM – 12:00 PM",
+      status: "Active • On Route",
+      isActive: true
+    };
+  },
+
+  /**
+   * Switch the active vehicle for Driver Mode
+   */
+  /**
+   * Synchronize Driver Mode with Municipality-Assigned Vehicle
+   * Ensures drivers cannot manually claim other vehicles; assignment is controlled by the Municipality.
+   */
+  syncDriverAssignment() {
+    let assignedVid = 'GCV-002';
+
+    if (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser) {
+      if (AuthEngine.currentUser.vehicleId) {
+        assignedVid = AuthEngine.currentUser.vehicleId;
+      } else if (AuthEngine.currentUser.vehicleNumber) {
+        const match = CityData.municipality.fleetVehicles.find(v => v.licensePlate === AuthEngine.currentUser.vehicleNumber);
+        if (match) assignedVid = match.vehicleId;
+      }
+    }
+
+    this.setDriverVehicle(assignedVid, true);
+  },
+
+  /**
+   * Set the active vehicle for Driver Mode (Enforced by Municipality Assignment)
+   */
+  setDriverVehicle(vehicleId, isSystemSync = false) {
+    if (typeof CityData !== 'undefined' && CityData.municipality && CityData.municipality.fleetVehicles) {
+      const v = CityData.municipality.fleetVehicles.find(item => item.vehicleId === vehicleId) || CityData.municipality.fleetVehicles[1];
+      if (v) {
+        this.driverTelemetry.vehicleId = v.vehicleId;
+        this.driverTelemetry.vehicleNumber = v.licensePlate;
+        this.driverTelemetry.wardId = v.wardId;
+        this.driverTelemetry.wardName = v.wardName;
+        this.driverTelemetry.routeId = v.routeId;
+        this.driverTelemetry.vehicleType = v.type;
+        this.driverTelemetry.driverName = v.driver;
+        this.driverTelemetry.driverId = v.driverId;
+        this.driverTelemetry.driverPhone = v.phone;
+
+        CityData.driver.assignedVehicleId = v.vehicleId;
+        CityData.driver.vehicleNumber = v.licensePlate;
+        CityData.driver.vehicleType = v.type;
+        CityData.driver.wardId = v.wardId;
+        CityData.driver.wardName = v.wardName;
+        CityData.driver.routeId = v.routeId;
+        CityData.driver.routeName = v.routeName;
+
+        // Re-render driver UI elements
+        const vehiclePlateEl = document.getElementById('driver-vehicle-plate-badge');
+        if (vehiclePlateEl) vehiclePlateEl.textContent = `${v.vehicleId} • ${v.licensePlate}`;
+
+        const vehicleIdTag = document.getElementById('driver-vehicle-id-tag');
+        if (vehicleIdTag) vehicleIdTag.textContent = v.vehicleId;
+
+        const vehiclePlateText = document.getElementById('driver-vehicle-plate-text');
+        if (vehiclePlateText) vehiclePlateText.textContent = v.licensePlate;
+
+        const wardTag = document.getElementById('driver-assigned-ward-tag');
+        if (wardTag) wardTag.textContent = `📍 ${v.wardName}`;
+
+        if (!isSystemSync && typeof CityAssist !== 'undefined' && CityAssist.showToast) {
+          CityAssist.showToast(`🚚 Vehicle: ${v.vehicleId} (${v.licensePlate}) • ${v.wardName}`);
+        }
+      }
+    }
+  },
+
+  /**
+   * Render Clean Inactive / Standby State for Citizen when no vehicle is active in their Ward
+   */
+  renderStandbyInactiveState(assignedVehicle) {
+    const v = assignedVehicle || this.getCitizenAssignedVehicle();
+    const wardName = v ? v.wardName : "your ward";
+    const schedule = v ? (v.schedule || "07:00 AM – 12:00 PM") : "07:00 AM – 12:00 PM";
+    const vId = v ? v.vehicleId : "GCV-002";
+
+    // 1. Citizen Garbage Tracking Screen
+    const gtDistance = document.getElementById('gt-distance-text');
+    const gtEta = document.getElementById('gt-eta-text');
+    const gtNoticeHeadline = document.querySelector('.gt-notice-headline');
+    const gtNoticeSubtext = document.querySelector('.gt-notice-subtext');
+    const gtFill = document.getElementById('gt-stepper-fill');
+    const gtTruckMarker = document.getElementById('gt-map-truck-marker');
+    const inactiveBanner = document.getElementById('citizen-vehicle-inactive-banner');
+    const activeHeroCard = document.querySelector('.gt-status-hero-card');
+
+    if (gtDistance) gtDistance.textContent = "Garbage vehicle is currently not active in your area.";
+    if (gtEta) gtEta.textContent = `Scheduled Pickup: ${schedule}`;
+    if (gtNoticeHeadline) {
+      gtNoticeHeadline.innerHTML = `Garbage vehicle is <strong style="color:#D97706;">currently not active</strong> in your area.`;
+    }
+    if (gtNoticeSubtext) {
+      gtNoticeSubtext.textContent = `Collection vehicle operates daily: ${schedule}. Please keep waste ready during this window.`;
+    }
+    if (gtFill) gtFill.style.width = `0%`;
+    if (gtTruckMarker) gtTruckMarker.setAttribute('transform', 'translate(-100, -100)'); // Hide truck pin
+
+    if (inactiveBanner) {
+      inactiveBanner.style.display = 'flex';
+      const schedText = document.getElementById('inactive-schedule-text');
+      if (schedText) schedText.textContent = `📍 ${wardName} • Scheduled Shift: ${schedule}`;
+    }
+
+    // 2. Citizen Home Screen Widget
+    const homeProximity = document.getElementById('home-proximity-text');
+    const homeMiniTruck = document.getElementById('home-mini-truck-marker');
+    if (homeProximity) {
+      homeProximity.innerHTML = `Vehicle not active in your area (Schedule: ${schedule})`;
+    }
+    if (homeMiniTruck) {
+      homeMiniTruck.setAttribute('transform', 'translate(-100, -100)');
+    }
+
+    // 3. ETA Card
+    const etaBigNum = document.getElementById('eta-big-number');
+    const etaDistNum = document.getElementById('eta-distance-number');
+    const etaDistUnit = document.getElementById('eta-distance-unit');
+    const etaArrivesAt = document.getElementById('eta-arrives-at-text');
+    const etaSpeedText = document.getElementById('eta-speed-text');
+    const etaRoutePct = document.getElementById('eta-route-pct-text');
+    const etaRouteFill = document.getElementById('eta-route-progress-fill');
+
+    if (etaBigNum) etaBigNum.textContent = '--';
+    if (etaDistNum) etaDistNum.textContent = 'OFF';
+    if (etaDistUnit) etaDistUnit.textContent = 'DUTY';
+    if (etaArrivesAt) etaArrivesAt.textContent = `⏰ Scheduled: ${schedule}`;
+    if (etaSpeedText) etaSpeedText.textContent = `Vehicle on Standby`;
+    if (etaRoutePct) etaRoutePct.textContent = 'Standby mode';
+    if (etaRouteFill) etaRouteFill.style.width = '0%';
+
+    // Hide Leaflet truck marker from citizen map
+    if (typeof LeafletMapEngine !== 'undefined' && LeafletMapEngine.truckMarkerCitizen && LeafletMapEngine.citizenMap) {
+      try {
+        LeafletMapEngine.citizenMap.removeLayer(LeafletMapEngine.truckMarkerCitizen);
+        LeafletMapEngine.truckMarkerCitizen = null;
+      } catch (e) {}
+    }
   },
 
   /**
@@ -652,12 +870,89 @@ const GPSTrackerEngine = {
   },
 
   /**
-   * Synchronize incoming driver GPS telemetry with all Citizen and Driver UI components
+   * Synchronize incoming driver GPS telemetry with Citizen and Driver UI components.
+   * ENFORCES AREA ISOLATION & PRIVACY: Citizens only see friendly area collection status without internal metadata.
    */
   handleIncomingDriverTelemetry(telemetry) {
     if (!telemetry || !telemetry.lat || !telemetry.lng) return;
 
-    // Calculate real Haversine distance between vehicle and citizen
+    // -------------------------------------------------------------
+    // 1. Update Driver Dashboard Telemetry HUD (#screen-driver)
+    // -------------------------------------------------------------
+    const driverCoords = document.getElementById('driver-telemetry-coords');
+    const driverEta = document.getElementById('driver-eta-display');
+    const driverSpeed = document.getElementById('driver-live-speed');
+    const driverSatPill = document.getElementById('driver-gps-satellite-status');
+
+    // Calculate distance for driver HUD
+    const driverDistKm = this.calculateHaversineDistance(
+      telemetry.lat,
+      telemetry.lng,
+      this.citizenLocation.lat,
+      this.citizenLocation.lng
+    );
+    const driverDistFormatted = driverDistKm < 1 ? `${Math.round(driverDistKm * 1000)} m` : `${driverDistKm.toFixed(1)} km`;
+    const driverEtaMins = Math.max(1, Math.round((driverDistKm / Math.max(telemetry.speed || 18, 12)) * 60));
+
+    if (driverCoords) {
+      driverCoords.textContent = `GPS: ${telemetry.lat.toFixed(4)}° N, ${telemetry.lng.toFixed(4)}° E (±${telemetry.accuracy || 4}m)`;
+    }
+    if (driverEta) {
+      driverEta.textContent = `${driverEtaMins} mins (${driverDistFormatted})`;
+    }
+    if (driverSpeed) {
+      driverSpeed.textContent = `${telemetry.speed || 0} km/h`;
+    }
+    if (driverSatPill) {
+      driverSatPill.innerHTML = telemetry.isHardwareGPS 
+        ? `<span class="pulse-dot-green"></span> Hardware Satellites Locked 🛰️`
+        : `<span class="pulse-dot-green"></span> Live GPS Broadcast Active 🟢`;
+    }
+
+    // Update Driver Map Truck Pin
+    const driverTruckPin = document.getElementById('driver-moving-truck-pin');
+    const pct = telemetry.progressPct !== undefined ? telemetry.progressPct : 50;
+    if (driverTruckPin) {
+      const dX = 24 + (pct / 100) * 286;
+      const dY = 72 + Math.sin((pct / 100) * Math.PI) * 20;
+      driverTruckPin.setAttribute('transform', `translate(${dX}, ${dY})`);
+    }
+
+    // Update Driver Leaflet Map
+    if (typeof LeafletMapEngine !== 'undefined' && LeafletMapEngine.driverMap) {
+      LeafletMapEngine.updateDriverTruckLocation(telemetry.lat, telemetry.lng, telemetry.speed, telemetry.heading);
+    }
+
+    // -------------------------------------------------------------
+    // 2. AREA ISOLATION FILTERING FOR CITIZEN SCREEN (#screen-garbage & #screen-home)
+    // -------------------------------------------------------------
+    const citizenWard = this.resolveCitizenWard();
+    const assignedVehicle = this.getCitizenAssignedVehicle();
+    const incomingWard = Number(telemetry.wardId) || (telemetry.vehicleId === 'GCV-001' ? 1 : (telemetry.vehicleId === 'GCV-002' ? 2 : (telemetry.vehicleId === 'GCV-003' ? 3 : (telemetry.vehicleId === 'GCV-004' ? 4 : (telemetry.vehicleId === 'GCV-005' ? 5 : 6)))));
+    const incomingVehicleId = telemetry.vehicleId || 'GCV-002';
+
+    // Verify if this telemetry belongs to the citizen's assigned ward vehicle
+    const isMyWardVehicle = (incomingWard === citizenWard) || (incomingVehicleId === assignedVehicle.vehicleId);
+
+    // If NOT citizen's ward vehicle, DO NOT show on citizen screen!
+    if (!isMyWardVehicle) {
+      console.log(`🔒 Area Isolation: Ignored telemetry for other ward vehicle (Ward ${incomingWard}). Citizen is in Ward ${citizenWard}.`);
+      return;
+    }
+
+    // Check if vehicle is active
+    const isVehicleActive = (telemetry.status === 'in_progress' || telemetry.status === 'active');
+
+    if (!isVehicleActive) {
+      this.renderStandbyInactiveState(assignedVehicle);
+      return;
+    }
+
+    // Hide inactive banner
+    const inactiveBanner = document.getElementById('citizen-vehicle-inactive-banner');
+    if (inactiveBanner) inactiveBanner.style.display = 'none';
+
+    // Calculate real Haversine distance between assigned vehicle and citizen
     const distanceKm = this.calculateHaversineDistance(
       telemetry.lat,
       telemetry.lng,
@@ -674,54 +969,28 @@ const GPSTrackerEngine = {
     const etaMins = Math.max(1, Math.round((distanceKm / effectiveSpeed) * 60));
 
     // Progress percentage along route (0% to 100%)
-    const pct = telemetry.progressPct !== undefined 
+    const routeProgressPct = telemetry.progressPct !== undefined 
       ? telemetry.progressPct 
       : Math.min(100, Math.max(0, Math.round((1 - Math.min(distanceKm / 2.5, 1)) * 100)));
 
-    // -------------------------------------------------------------
-    // 1. Update Driver Dashboard Telemetry HUD (#screen-driver)
-    // -------------------------------------------------------------
-    const driverCoords = document.getElementById('driver-telemetry-coords');
-    const driverEta = document.getElementById('driver-eta-display');
-    const driverSpeed = document.getElementById('driver-live-speed');
-    const driverSatPill = document.getElementById('driver-gps-satellite-status');
-
-    if (driverCoords) {
-      driverCoords.textContent = `GPS: ${telemetry.lat.toFixed(4)}° N, ${telemetry.lng.toFixed(4)}° E (±${telemetry.accuracy || 4}m)`;
-    }
-    if (driverEta) {
-      driverEta.textContent = `${etaMins} mins (${distanceFormatted})`;
-    }
-    if (driverSpeed) {
-      driverSpeed.textContent = `${telemetry.speed || 0} km/h`;
-    }
-    if (driverSatPill) {
-      driverSatPill.innerHTML = telemetry.isHardwareGPS 
-        ? `<span class="pulse-dot-green"></span> Hardware Satellites Locked 🛰️`
-        : `<span class="pulse-dot-green"></span> Live GPS Broadcast Active 🟢`;
-    }
-
-    // Update Driver Map Truck Pin
-    const driverTruckPin = document.getElementById('driver-moving-truck-pin');
-    if (driverTruckPin) {
-      const dX = 24 + (pct / 100) * 286;
-      const dY = 72 + Math.sin((pct / 100) * Math.PI) * 20;
-      driverTruckPin.setAttribute('transform', `translate(${dX}, ${dY})`);
-    }
-
-    // -------------------------------------------------------------
-    // 2. Update Citizen Garbage Tracking Screen (#screen-garbage)
-    // -------------------------------------------------------------
+    // Update Citizen Garbage Tracking Screen (#screen-garbage)
     const gtDistance = document.getElementById('gt-distance-text');
     const gtEta = document.getElementById('gt-eta-text');
     const gtFill = document.getElementById('gt-stepper-fill');
     const gtTruckMarker = document.getElementById('gt-map-truck-marker');
     const gtNoticeHeadline = document.querySelector('.gt-notice-headline');
+    const gtNoticeSubtext = document.querySelector('.gt-notice-subtext');
+    const gtVehicleBadge = document.getElementById('gt-assigned-vehicle-badge');
+
+    // Privacy-First: Show friendly municipal vehicle info without internal IDs or license plates
+    if (gtVehicleBadge) {
+      gtVehicleBadge.textContent = `🚛 Collection Van • ${assignedVehicle.wardName || 'Ward 2'}`;
+    }
 
     if (gtDistance) {
       gtDistance.textContent = distanceKm < 0.15 
-        ? "Vehicle is at your doorstep!" 
-        : `Vehicle is ${distanceFormatted} away`;
+        ? "Collection vehicle is at your doorstep!" 
+        : `Collection vehicle is ${distanceFormatted} away`;
     }
     if (gtEta) {
       gtEta.textContent = distanceKm < 0.15 
@@ -730,19 +999,22 @@ const GPSTrackerEngine = {
     }
     if (gtNoticeHeadline) {
       gtNoticeHeadline.innerHTML = distanceKm < 0.15
-        ? `Garbage collector has <strong class="highlight-green-text">arrived at your doorstep.</strong>`
-        : `Garbage collector will arrive in your area <strong class="highlight-green-text">within ${etaMins} mins.</strong>`;
+        ? `Garbage collection vehicle has <strong class="highlight-green-text">arrived at your doorstep.</strong>`
+        : `Garbage collection vehicle will arrive in your area <strong class="highlight-green-text">within ${etaMins} mins.</strong>`;
+    }
+    if (gtNoticeSubtext) {
+      gtNoticeSubtext.textContent = `Assigned to ${assignedVehicle.wardName || 'your area'}. Please keep your segregated waste ready.`;
     }
 
     // Stepper Stage Progress Fill & Status
     if (gtFill) {
-      gtFill.style.width = `${Math.max(12, pct)}%`;
+      gtFill.style.width = `${Math.max(12, routeProgressPct)}%`;
     }
 
     let activeStepIdx = 0;
-    if (pct >= 90 || distanceKm < 0.2) activeStepIdx = 3;
-    else if (pct >= 60 || distanceKm < 0.8) activeStepIdx = 2;
-    else if (pct >= 30 || distanceKm < 1.5) activeStepIdx = 1;
+    if (routeProgressPct >= 90 || distanceKm < 0.2) activeStepIdx = 3;
+    else if (routeProgressPct >= 60 || distanceKm < 0.8) activeStepIdx = 2;
+    else if (routeProgressPct >= 30 || distanceKm < 1.5) activeStepIdx = 1;
     else activeStepIdx = 0;
 
     [0, 1, 2, 3].forEach(idx => {
@@ -768,9 +1040,8 @@ const GPSTrackerEngine = {
 
     // Move Garbage Tracking Screen Truck Marker on Map SVG
     if (gtTruckMarker) {
-      // Map path: From (220, 15) along curve to Citizen Home Pin (85, 185)
-      const mapX = 220 - (pct / 100) * 135;
-      const mapY = 15 + (pct / 100) * 170;
+      const mapX = 220 - (routeProgressPct / 100) * 135;
+      const mapY = 15 + (routeProgressPct / 100) * 170;
       gtTruckMarker.setAttribute('transform', `translate(${mapX}, ${mapY})`);
     }
 
@@ -786,12 +1057,12 @@ const GPSTrackerEngine = {
     const homeMiniTruck = document.getElementById('home-mini-truck-marker');
     if (homeProximity) {
       homeProximity.innerHTML = distanceKm < 0.15
-        ? `Vehicle at your doorstep 📍`
-        : `Vehicle: ${distanceFormatted} away (${etaMins}m)`;
+        ? `Vehicle ${incomingVehicleId} at your doorstep 📍`
+        : `Vehicle ${incomingVehicleId}: ${distanceFormatted} away (${etaMins}m)`;
     }
     if (homeMiniTruck) {
-      const hX = 25 + (pct / 100) * 90;
-      const hY = 78 - (pct / 100) * 45;
+      const hX = 25 + (routeProgressPct / 100) * 90;
+      const hY = 78 - (routeProgressPct / 100) * 45;
       homeMiniTruck.setAttribute('transform', `translate(${hX}, ${hY})`);
     }
 
@@ -800,16 +1071,16 @@ const GPSTrackerEngine = {
     // -------------------------------------------------------------
     const muniTruck = document.getElementById('muni-truck-1');
     if (muniTruck) {
-      const muniX = 40 + (pct / 100) * 220;
-      const muniY = 48 + Math.sin((pct / 100) * Math.PI) * 35;
+      const muniX = 40 + (routeProgressPct / 100) * 220;
+      const muniY = 48 + Math.sin((routeProgressPct / 100) * Math.PI) * 35;
       muniTruck.setAttribute('transform', `translate(${muniX}, ${muniY})`);
     }
 
     // -------------------------------------------------------------
-    // 5. Update Interactive Leaflet Map Truck Pins
+    // 5. Update Interactive Leaflet Map Truck Pins (ONLY citizen's assigned vehicle)
     // -------------------------------------------------------------
     if (typeof LeafletMapEngine !== 'undefined') {
-      LeafletMapEngine.updateTruckLocation(telemetry.lat, telemetry.lng, telemetry.speed, telemetry.heading);
+      LeafletMapEngine.updateTruckLocation(telemetry.lat, telemetry.lng, telemetry.speed, telemetry.heading, incomingVehicleId);
     }
 
     // -------------------------------------------------------------
@@ -833,9 +1104,9 @@ const GPSTrackerEngine = {
     }
 
     // -------------------------------------------------------------
-    // 8. Update ETA Countdown Card (Feature 1)
+    // 8. Update ETA Countdown Card
     // -------------------------------------------------------------
-    this.updateETACountdownCard(distanceKm, etaMins, telemetry.speed || 18, pct);
+    this.updateETACountdownCard(distanceKm, etaMins, telemetry.speed || 18, routeProgressPct);
   },
 
   /**
@@ -1266,6 +1537,52 @@ const GPSTrackerEngine = {
           Save & Broadcast 🚀
         </button>
       </div>
+    `;
+
+    if (typeof CityAssist !== 'undefined') {
+      CityAssist.openModal(modalHtml);
+    }
+  },
+
+  /**
+   * View Official Municipality Vehicle Assignment Details
+   */
+  openVehicleSelectModal() {
+    const fleet = (typeof CityData !== 'undefined' && CityData.municipality && CityData.municipality.fleetVehicles) 
+      ? CityData.municipality.fleetVehicles 
+      : [];
+    const currentVid = this.driverTelemetry.vehicleId || (CityData && CityData.driver ? CityData.driver.assignedVehicleId : "GCV-002");
+    const assignedVehicle = fleet.find(v => v.vehicleId === currentVid) || fleet[1] || {};
+
+    const modalHtml = `
+      <div class="modal-header-block" style="text-align:center; padding-bottom:4px;">
+        <div style="font-size:2.2rem; margin-bottom:4px;">🔒</div>
+        <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Official Vehicle Assignment</h3>
+        <p style="color:#64748B; font-size:0.82rem;">Vehicle and route assignments are centrally managed by the Municipality</p>
+      </div>
+
+      <div style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:14px; padding:14px; margin:16px 0;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span style="background:#15803D; color:#FFF; font-size:0.85rem; font-weight:900; padding:3px 8px; border-radius:8px;">${assignedVehicle.vehicleId || 'GCV-002'}</span>
+          <strong style="color:#0F172A; font-size:0.95rem;">${assignedVehicle.licensePlate || 'MH-12-EA-4920'}</strong>
+          <span style="background:#DCFCE7; color:#15803D; font-size:0.72rem; font-weight:800; padding:2px 6px; border-radius:6px; margin-left:auto;">✓ Assigned Driver</span>
+        </div>
+
+        <div style="font-size:0.8rem; color:#334155; line-height:1.6;">
+          <div>📍 <strong>Ward:</strong> ${assignedVehicle.wardName || 'Ward 2'}</div>
+          <div>🗺️ <strong>Route:</strong> ${assignedVehicle.routeId || 'Route 4B'} (${assignedVehicle.routeName || 'Samta Colony'})</div>
+          <div>⏰ <strong>Shift:</strong> ${assignedVehicle.schedule || '07:00 AM – 12:00 PM'}</div>
+          <div>👤 <strong>Assigned Driver:</strong> ${assignedVehicle.driver || 'Ramesh Shinde'} (${assignedVehicle.phone || '9822088401'})</div>
+        </div>
+      </div>
+
+      <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:10px 12px; font-size:0.74rem; color:#991B1B; font-weight:700; margin-bottom:14px;">
+        🛡️ Drivers cannot manually switch vehicles. Reassignments must be approved by the Municipal Command Center.
+      </div>
+
+      <button type="button" onclick="CityAssist.closeModal()" class="primary-green-btn" style="width:100%; padding:12px; font-weight:800; cursor:pointer;">
+        Understood ✓
+      </button>
     `;
 
     if (typeof CityAssist !== 'undefined') {

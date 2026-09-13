@@ -5,14 +5,13 @@
  */
 
 const CloudRealtime = {
-  provider: 'supabase',
+  provider: 'firebase',
   config: {
     supabaseUrl: 'https://mgypwawloputeqofscmg.supabase.co',
     supabaseKey: 'sb_publishable_tqmhRn5zoQT9Xf5ipiD6cA_TsPTpdgy',
-    supabaseSecretKey: 'sb_secret_jjnQn6PwfWL42r50-TqfJg_ba54aStJ',
     firebaseConfig: {
-      databaseURL: '',
-      projectId: ''
+      databaseURL: 'https://cityassist-7bad3-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'cityassist-7bad3'
     }
   },
   topic: 'cityassist_talegaon_truck_live_2026',
@@ -67,7 +66,7 @@ const CloudRealtime = {
     if (typeof supabase !== 'undefined' && typeof supabase.createClient === 'function') {
       try {
         const url = this.config.supabaseUrl;
-        const key = this.config.supabaseKey || this.config.supabaseSecretKey;
+        const key = this.config.supabaseKey;
         if (url && key) {
           this.supabaseClient = supabase.createClient(url, key);
           

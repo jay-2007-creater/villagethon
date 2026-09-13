@@ -3,6 +3,16 @@
  */
 
 const UIComponents = {
+  escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   getServiceIcon(type) {
     switch (type) {
       case 'water':
@@ -26,6 +36,34 @@ const UIComponents = {
               <path d="M12 2v20M17 5H7M19 9H5M21 13H3M19 17H5M17 21H7"/>
             </svg>
           </div>`;
+      case 'fire':
+        return `
+          <div class="service-icon-box" style="background:#FEE2E2; color:#DC2626;">
+            <svg viewBox="0 0 24 24" fill="#DC2626" width="22" height="22">
+              <path d="M12 2c-.8 2.2-2.5 4.1-3.7 6.1C7.1 10.2 6.5 12 6.5 14c0 3 2.5 5.5 5.5 5.5s5.5-2.5 5.5-5.5c0-1.8-.7-3.4-1.8-4.8C14.5 7.4 13.2 5 12 2zm0 15c-1.7 0-3-1.3-3-3 0-1 .4-1.9 1.1-2.5.3 1.2 1.3 2 2.5 2 .2 0 .5 0 .7-.1-.1 1.9-1.3 3.6-1.3 3.6z"/>
+            </svg>
+          </div>`;
+      case 'medical':
+        return `
+          <div class="service-icon-box" style="background:#FFE4E6; color:#E11D48;">
+            <svg viewBox="0 0 24 24" fill="#E11D48" width="22" height="22">
+              <path d="M19 10.5h-4.5V6a1.5 1.5 0 0 0-3 0v4.5H7a1.5 1.5 0 0 0 0 3h4.5V18a1.5 1.5 0 0 0 3 0v-4.5H19a1.5 1.5 0 0 0 0-3z"/>
+            </svg>
+          </div>`;
+      case 'police':
+        return `
+          <div class="service-icon-box" style="background:#DBEAFE; color:#2563EB;">
+            <svg viewBox="0 0 24 24" fill="#2563EB" width="22" height="22">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+            </svg>
+          </div>`;
+      case 'flood':
+        return `
+          <div class="service-icon-box" style="background:#E0F2FE; color:#0284C7;">
+            <svg viewBox="0 0 24 24" fill="#0284C7" width="22" height="22">
+              <path d="M12 3a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9s9-4.03 9-9a9 9 0 0 0-9-9zm0 4a5 5 0 0 1 5 5c0 2.76-2.24 5-5 5s-5-2.24-5-5a5 5 0 0 1 5-5z"/>
+            </svg>
+          </div>`;
       default:
         return `
           <div class="service-icon-box waste-icon">
@@ -39,32 +77,38 @@ const UIComponents = {
   renderRequestCard(req) {
     const isAssigned = req.assignedTo && req.assignedTo.name;
     const badgeClass = req.status === 'on_the_way' ? 'on-the-way' : (req.status === 'completed' ? 'completed' : (req.status === 'in_progress' ? 'in-progress' : 'canceled'));
-    
+    const safeTitle = this.escapeHtml(req.title);
+    const safeId = this.escapeHtml(req.id);
+    const safeStatusLabel = this.escapeHtml(req.statusLabel);
+    const safeAssignedName = isAssigned ? this.escapeHtml(req.assignedTo.name) : '';
+    const safeStep = req.timeline ? this.escapeHtml(req.timeline.step) : '';
+    const safeDetail = req.timeline ? this.escapeHtml(req.timeline.detail) : '';
+
     return `
-      <div class="request-card" data-req-id="${req.id}">
+      <div class="request-card" data-req-id="${safeId}">
         <div class="req-header-row">
-          <span class="req-id">${req.id}</span>
-          <span class="status-badge ${badgeClass}">${req.statusLabel}</span>
+          <span class="req-id">${safeId}</span>
+          <span class="status-badge ${badgeClass}">${safeStatusLabel}</span>
         </div>
 
         <div class="req-service-info">
           ${this.getServiceIcon(req.iconType)}
-          <span class="service-name">${req.title}</span>
+          <span class="service-name">${safeTitle}</span>
         </div>
 
         ${isAssigned ? `
           <div class="req-assigned-row">
-            <img src="${req.assignedTo.avatar}" alt="${req.assignedTo.name}" class="assigned-avatar">
+            <img src="${req.assignedTo.avatar}" alt="${safeAssignedName}" class="assigned-avatar">
             <div class="assigned-details">
               <span class="assigned-label">Assigned to</span>
-              <span class="assigned-name">${req.assignedTo.name}</span>
+              <span class="assigned-name">${safeAssignedName}</span>
             </div>
           </div>
         ` : ''}
 
         <div class="req-timeline-status">
-          <div class="timeline-bullet-icon ${req.timeline.iconType === 'gear' ? 'green-gear' : 'green-check'}">
-            ${req.timeline.iconType === 'gear' ? `
+          <div class="timeline-bullet-icon ${(req.timeline && req.timeline.iconType === 'gear') ? 'green-gear' : 'green-check'}">
+            ${(req.timeline && req.timeline.iconType === 'gear') ? `
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -76,11 +120,11 @@ const UIComponents = {
               </svg>
             `}
           </div>
-          <div class="timeline-step-text">${req.timeline.step}</div>
-          <div class="timeline-sub-text">${req.timeline.detail}</div>
+          <div class="timeline-step-text">${safeStep}</div>
+          <div class="timeline-sub-text">${safeDetail}</div>
         </div>
 
-        <button class="view-details-btn" onclick="CityAssist.showRequestDetails('${req.id}')">
+        <button class="view-details-btn" onclick="CityAssist.showRequestDetails('${safeId}')">
           View Details
         </button>
       </div>
@@ -119,13 +163,63 @@ const UIComponents = {
   },
 
   renderEmergencyDispatchModal(type) {
-    const icons = {
-      'Water Leakage': '💧',
-      'Electrical Issue': '⚡',
-      'Gas Leak (Suspected)': '🔥',
-      'Other Urgent Repair': '🔧'
+    const configs = {
+      'Fire & Rescue': {
+        icon: '🚒',
+        badge: 'FIRE & RESCUE DISPATCH',
+        squad: 'Talegaon Fire Brigade - Tender Squad #2',
+        officer: 'Fire Officer S. K. Jadhav (+91 98220 10101)',
+        phoneCall: '+91 98220 10101',
+        helpline: '101 / 112',
+        eta: '3-5 mins'
+      },
+      'Medical Emergency': {
+        icon: '🚑',
+        badge: 'ADVANCED LIFE SUPPORT EMS',
+        squad: 'Talegaon General Hospital ICU Ambulance',
+        officer: 'Paramedic Dr. Amit Patil (+91 98220 10808)',
+        phoneCall: '+91 98220 10808',
+        helpline: '108 / 102',
+        eta: '4-6 mins'
+      },
+      'Police Emergency': {
+        icon: '👮',
+        badge: 'POLICE RAPID PATROL',
+        squad: 'Talegaon City Police - PCR Van #3',
+        officer: 'Sub-Inspector R. B. Shinde (+91 98220 11200)',
+        phoneCall: '+91 98220 11200',
+        helpline: '112 / 100',
+        eta: '3-5 mins'
+      },
+      'Electrical Emergency': {
+        icon: '⚡',
+        badge: 'HIGH-VOLTAGE POWER SQUAD',
+        squad: 'MSEDCL 24x7 Power Breakdown Crew',
+        officer: 'Line Officer M. R. Gaikwad (+91 98220 19120)',
+        phoneCall: '+91 98220 19120',
+        helpline: '1912',
+        eta: '6-8 mins'
+      },
+      'Flood / Disaster': {
+        icon: '🌊',
+        badge: 'DISASTER & FLOOD RESCUE CELL',
+        squad: 'Municipal Disaster Management & NDRF Unit',
+        officer: 'Disaster Incharge K. N. Bhosale (+91 98220 10770)',
+        phoneCall: '+91 98220 10770',
+        helpline: '1077 / 020-25501269',
+        eta: '5-7 mins'
+      }
     };
-    const icon = icons[type] || '🚨';
+
+    const cfg = configs[type] || {
+      icon: '🚨',
+      badge: 'HIGH-PRIORITY SOS DISPATCH',
+      squad: 'Talegaon Rapid Response Squad #4',
+      officer: 'Patrol Officer Narendra P. (+91 98220 11999)',
+      phoneCall: '+91 98220 11999',
+      helpline: '1800 233 4567',
+      eta: '4-6 mins'
+    };
 
     return `
       <div style="text-align:center; padding:10px 0 16px;">
@@ -133,20 +227,20 @@ const UIComponents = {
         <div style="position:relative; width:80px; height:80px; margin:0 auto 16px;">
           <span class="leaflet-radar-ring red" style="position:absolute; width:100%; height:100%; border-radius:50%; border:2.5px solid #EF4444; animation:sosPulseRing 1.4s infinite;"></span>
           <div style="width:80px; height:80px; background:linear-gradient(135deg, #DC2626, #EF4444); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.4rem; box-shadow:0 8px 24px rgba(220, 38, 38, 0.45); color:#FFF;">
-            ${icon}
+            ${cfg.icon}
           </div>
         </div>
 
         <div style="display:inline-flex; align-items:center; gap:6px; background:#FEE2E2; color:#991B1B; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.78rem; margin-bottom:8px;">
           <span style="width:8px; height:8px; border-radius:50%; background:#DC2626; display:inline-block; animation:pulse-ring 1s infinite;"></span>
-          HIGH-PRIORITY SOS DISPATCH
+          ${cfg.badge}
         </div>
 
         <h3 style="font-size:1.38rem; font-weight:900; color:#0F172A; margin:0 0 6px; letter-spacing:-0.3px;">
           Rapid Response Dispatched!
         </h3>
         <p style="font-size:0.85rem; color:#64748B; line-height:1.4; margin:0 0 16px; padding:0 8px;">
-          Emergency assistance triggered for <strong>${type}</strong> at <strong style="color:#1E293B;">Samta Colony, Talegaon Dabhade</strong>.
+          Emergency assistance triggered for <strong style="color:#DC2626;">${type}</strong> at <strong style="color:#1E293B;">Samta Colony, Talegaon Dabhade</strong>.
         </p>
 
         <!-- Officer & Patrol Assignment Card -->
@@ -154,14 +248,14 @@ const UIComponents = {
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <div style="width:42px; height:42px; border-radius:12px; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
-                👮
+                ${cfg.icon}
               </div>
               <div>
-                <strong style="font-size:0.92rem; color:#0F172A; display:block;">Patrol Squad #4 (Talegaon Central)</strong>
-                <span style="font-size:0.75rem; color:#16A34A; font-weight:700;">● Active En Route • ETA ~4-6 mins</span>
+                <strong style="font-size:0.92rem; color:#0F172A; display:block;">${cfg.squad}</strong>
+                <span style="font-size:0.75rem; color:#16A34A; font-weight:700;">● Active En Route • ETA ~${cfg.eta}</span>
               </div>
             </div>
-            <button type="button" onclick="CityAssist.showToast('📞 Dialing Patrol Officer Narendra P. (+91 98220 11999)...')" style="background:#16A34A; color:#FFF; border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            <button type="button" onclick="CityAssist.showToast('📞 Dialing ${cfg.officer}...')" style="background:#16A34A; color:#FFF; border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:4px;">
               📞 Call Officer
             </button>
           </div>
@@ -173,21 +267,27 @@ const UIComponents = {
             </div>
             <div>
               <span style="color:#64748B; display:block;">Toll-Free Control Room:</span>
-              <strong style="color:#1D4ED8;">1800 233 4567</strong>
+              <strong style="color:#1D4ED8;">${cfg.helpline}</strong>
             </div>
           </div>
         </div>
 
         <!-- Quick Helplines Row -->
-        <div style="display:flex; justify-content:center; gap:8px; margin-bottom:18px;">
-          <button type="button" onclick="CityAssist.showToast('Calling Police (112)...')" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:6px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">
-            🚓 Police 112
-          </button>
-          <button type="button" onclick="CityAssist.showToast('Calling Fire & Rescue (101)...')" style="background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; padding:6px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">
+        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-bottom:18px;">
+          <button type="button" onclick="CityAssist.showToast('Calling Fire & Rescue (101)...')" style="background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; padding:6px 10px; border-radius:8px; font-size:0.74rem; font-weight:800; cursor:pointer;">
             🚒 Fire 101
           </button>
-          <button type="button" onclick="CityAssist.showToast('Calling Ambulance (108)...')" style="background:#F0FDF4; color:#15803D; border:1px solid #BBF7D0; padding:6px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">
-            🚑 Medical 108
+          <button type="button" onclick="CityAssist.showToast('Calling Ambulance (108)...')" style="background:#FFF1F2; color:#E11D48; border:1px solid #FFE4E6; padding:6px 10px; border-radius:8px; font-size:0.74rem; font-weight:800; cursor:pointer;">
+            🚑 Ambulance 108
+          </button>
+          <button type="button" onclick="CityAssist.showToast('Calling Police (112)...')" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; padding:6px 10px; border-radius:8px; font-size:0.74rem; font-weight:800; cursor:pointer;">
+            👮 Police 112
+          </button>
+          <button type="button" onclick="CityAssist.showToast('Calling Electricity (1912)...')" style="background:#FFFBEB; color:#B45309; border:1px solid #FDE68A; padding:6px 10px; border-radius:8px; font-size:0.74rem; font-weight:800; cursor:pointer;">
+            ⚡ Power 1912
+          </button>
+          <button type="button" onclick="CityAssist.showToast('Calling Disaster Relief (1077)...')" style="background:#F0F9FF; color:#0369A1; border:1px solid #BAE6FD; padding:6px 10px; border-radius:8px; font-size:0.74rem; font-weight:800; cursor:pointer;">
+            🌊 Disaster 1077
           </button>
         </div>
 
@@ -647,38 +747,45 @@ const UIComponents = {
           <div style="position:absolute; width:80%; height:2px; background:#10B981; animation:scan-line 2s infinite ease-in-out;"></div>
         </div>
         <p style="font-size:0.85rem; color:#64748B; margin-bottom:16px;">Align camera with QR code printed on your residential segregation bin.</p>
-        <button class="primary-green-btn" onclick="CityAssist.showToast('Bin #4920 QR Verified! +10 points awarded'); CityAssist.closeModal();">Simulate Scan Success</button>
+        <button class="primary-green-btn" onclick="CityAssist.verifyScannedBinQR();" style="width:100%; padding:12px; font-weight:800;">✓ Verify Residential Bin QR</button>
       </div>
     `;
   },
 
   renderCommunityPost(post) {
+    const safeAuthorName = this.escapeHtml(post.author ? post.author.name : 'Citizen');
+    const safeAuthorRole = this.escapeHtml(post.author ? post.author.role : 'Resident');
+    const safeTime = this.escapeHtml(post.time || 'Recently');
+    const safeBadgeText = this.escapeHtml(post.badgeText || '');
+    const safeBadgeType = this.escapeHtml(post.badgeType || '');
+    const safeText = this.escapeHtml(post.text || '');
+
     return `
       <article class="community-post-card" id="post-card-${post.id}">
         <div class="post-header-row">
           <div class="post-author-block">
-            ${post.author.isOfficial ? `
+            ${post.author && post.author.isOfficial ? `
               <div class="official-admin-avatar">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm4 4h-2v-6h2v6z"/>
                 </svg>
               </div>
             ` : `
-              <img src="${post.author.avatar}" alt="${post.author.name}" class="post-author-avatar">
+              <img src="${post.author ? post.author.avatar : ''}" alt="${safeAuthorName}" class="post-author-avatar">
             `}
             <div class="post-author-details">
-              <span class="post-author-name">${post.author.name}</span>
-              <span class="post-author-role">${post.author.role}</span>
+              <span class="post-author-name">${safeAuthorName}</span>
+              <span class="post-author-role">${safeAuthorRole}</span>
             </div>
           </div>
           <div class="post-header-meta">
-            <span class="post-time-tag">${post.time}</span>
-            <span class="post-badge-pill ${post.badgeType}">${post.badgeText}</span>
+            <span class="post-time-tag">${safeTime}</span>
+            <span class="post-badge-pill ${safeBadgeType}">${safeBadgeText}</span>
           </div>
         </div>
 
         <div class="post-body-container ${post.isBeforeAfter ? 'has-slider' : ''}">
-          <p class="post-text-content">${post.text}</p>
+          <p class="post-text-content">${safeText}</p>
 
           ${post.isBeforeAfter ? `
             <!-- Interactive Before/After Split Comparison Slider -->
@@ -1290,7 +1397,7 @@ const UIComponents = {
     `;
   },
 
-  renderOTPVerificationModal(phone, demoOtp = "4920") {
+  renderOTPVerificationModal(phone) {
     return `
       <div class="modal-header-block" style="text-align:center;">
         <div style="width:54px; height:54px; border-radius:50%; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin:0 auto 10px;">
@@ -1298,32 +1405,27 @@ const UIComponents = {
         </div>
         <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:4px;">Enter Verification Code</h3>
         <p style="color:#64748B; font-size:0.85rem; margin-bottom:16px;">
-          We have sent a 4-digit verification code to <strong style="color:#0F172A;">+91 ${phone}</strong>
+          We have sent a 6-digit verification code to <strong style="color:#0F172A;">+91 ${phone}</strong>
         </p>
       </div>
 
-      <!-- 4-Digit OTP Inputs -->
-      <div style="display:flex; justify-content:center; gap:12px; margin-bottom:16px;">
-        <input type="text" maxlength="1" id="otp-digit-1" class="otp-digit-box" autofocus oninput="if(this.value) document.getElementById('otp-digit-2').focus()">
-        <input type="text" maxlength="1" id="otp-digit-2" class="otp-digit-box" oninput="if(this.value) document.getElementById('otp-digit-3').focus()">
-        <input type="text" maxlength="1" id="otp-digit-3" class="otp-digit-box" oninput="if(this.value) document.getElementById('otp-digit-4').focus()">
-        <input type="text" maxlength="1" id="otp-digit-4" class="otp-digit-box" oninput="if(this.value) AuthEngine.verifyOTP()">
-      </div>
-
-      <!-- Quick Auto-Fill Demo OTP Pill -->
-      <div style="text-align:center; margin-bottom:18px;">
-        <button type="button" onclick="document.getElementById('otp-digit-1').value='4'; document.getElementById('otp-digit-2').value='9'; document.getElementById('otp-digit-3').value='2'; document.getElementById('otp-digit-4').value='0'; AuthEngine.verifyOTP();" style="background:#F0FDF4; border:1px solid #BBF7D0; color:#15803D; font-size:0.75rem; font-weight:800; padding:5px 12px; border-radius:14px; cursor:pointer;">
-          ⚡ Auto-Fill Demo OTP (${demoOtp})
-        </button>
+      <!-- 6-Digit OTP Inputs -->
+      <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-bottom:16px;">
+        <input type="tel" maxlength="1" id="modal-otp-1" class="otp-digit-box" autofocus oninput="if(this.value) document.getElementById('modal-otp-2').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+        <input type="tel" maxlength="1" id="modal-otp-2" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-3').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+        <input type="tel" maxlength="1" id="modal-otp-3" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-4').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+        <input type="tel" maxlength="1" id="modal-otp-4" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-5').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+        <input type="tel" maxlength="1" id="modal-otp-5" class="otp-digit-box" oninput="if(this.value) document.getElementById('modal-otp-6').focus()" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
+        <input type="tel" maxlength="1" id="modal-otp-6" class="otp-digit-box" style="text-align:center; font-weight:800; font-size:1.2rem; padding:10px 0; border:1.5px solid #CBD5E1; border-radius:10px;">
       </div>
 
       <!-- Verify Button -->
-      <button type="button" class="primary-green-btn" onclick="AuthEngine.verifyOTP()" style="width:100%; padding:14px; font-weight:800; font-size:0.95rem; margin-bottom:12px;">
+      <button type="button" class="primary-green-btn" onclick="AuthEngine.submitMobileOTP()" style="width:100%; padding:14px; font-weight:800; font-size:0.95rem; margin-bottom:12px;">
         Verify & Continue 🚀
       </button>
 
       <div style="text-align:center; font-size:0.78rem; color:#64748B;">
-        Didn't receive code? <a href="javascript:void(0)" onclick="CityAssist.showToast('Resending OTP to +91 ${phone}...')" style="color:#0F7943; font-weight:800;">Resend OTP</a>
+        Didn't receive code? <a href="javascript:void(0)" onclick="AuthEngine.requestMobileOTP()" style="color:#0F7943; font-weight:800;">Resend OTP</a>
       </div>
     `;
   },

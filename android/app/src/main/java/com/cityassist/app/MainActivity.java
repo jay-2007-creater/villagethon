@@ -107,6 +107,35 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
             }, "AndroidGoogleAuthBridge");
+
+            // 3. Android System App Bridge (Back Button & LifeCycle)
+            webView.addJavascriptInterface(new Object() {
+                @JavascriptInterface
+                public void minimizeApp() {
+                    runOnUiThread(() -> moveTaskToBack(true));
+                }
+
+                @JavascriptInterface
+                public void exitApp() {
+                    runOnUiThread(() -> finish());
+                }
+            }, "AndroidAppBridge");
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().evaluateJavascript(
+                "if (typeof CityAssist !== 'undefined' && typeof CityAssist.handleAndroidBackButton === 'function') { " +
+                "  CityAssist.handleAndroidBackButton(); " +
+                "} else { " +
+                "  window.history.back(); " +
+                "}",
+                null
+            );
+        } else {
+            super.onBackPressed();
         }
     }
 

@@ -1,0 +1,24 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Grievance photos uploaded by citizens
+    match /grievance_photos/{photoId} {
+      // Any authenticated user can upload photos under 10MB
+      allow create: if request.auth != null 
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+
+      // Public read for viewing attached complaint photos
+      allow read: if true;
+
+      // Prevent unauthorized deletion of evidence photos
+      allow delete: if false;
+    }
+
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

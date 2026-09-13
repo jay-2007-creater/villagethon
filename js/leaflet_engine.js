@@ -422,9 +422,9 @@ const LeafletMapEngine = {
       .bindPopup(`
         <div style="font-family:'Plus Jakarta Sans',sans-serif; padding:6px 2px;">
           <div style="font-weight:900; color:#15803D; font-size:14px; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
-            <span>🚚</span> Vehicle #MH-12-EA-4920
+            <span>🚚</span> Waste Collection Vehicle
           </div>
-          <div style="font-size:12px; color:#475569;">Talegaon Municipal Route • Ramesh Shinde</div>
+          <div style="font-size:12px; color:#475569;">Talegaon Municipal Sanitation • Active Route</div>
           <div style="display:flex; gap:8px; margin-top:8px;">
             <button type="button" onclick="AudioAnnouncerEngine.triggerTestAnnouncement()" style="background:#DCFCE7; border:1px solid #86EFAC; color:#15803D; font-weight:800; font-size:11px; padding:4px 8px; border-radius:8px; cursor:pointer;">
               🔊 Play Voice Alert
@@ -831,12 +831,51 @@ const LeafletMapEngine = {
   /**
    * Update live truck position across all active Leaflet maps
    */
-  updateTruckLocation(lat, lng, speed = 18, heading = 0) {
+  updateTruckLocation(lat, lng, speed = 18, heading = 0, vehicleId = 'GCV-002') {
     const spdText = speed > 0 ? `${Math.round(speed)} km/h` : 'At Rest';
 
     // 1. Citizen Tracking Screen Map
-    if (this.truckMarkerCitizen) {
-      this.truckMarkerCitizen.setLatLng([lat, lng]);
+    if (this.citizenMap) {
+      if (!this.truckMarkerCitizen) {
+        const truckIcon = L.divIcon({
+          className: 'leaflet-truck-interactive-wrap',
+          html: `
+            <div class="leaflet-truck-interactive">
+              <span class="leaflet-radar-ring green wave-1"></span>
+              <span class="leaflet-radar-ring green wave-2"></span>
+              <span class="leaflet-radar-ring green wave-3"></span>
+              <div class="leaflet-heading-beam" id="citizen-heading-beam" style="transform: translate(-50%, -50%) rotate(${heading || 0}deg) translateY(-22px);"></div>
+              <div class="leaflet-pin-core interactive-truck">🚚</div>
+              <div class="leaflet-live-speed-tag" id="citizen-truck-speed">
+                <span class="live-dot"></span>
+                <span id="citizen-truck-speed-text">${spdText}</span>
+              </div>
+            </div>
+          `,
+          iconSize: [54, 54],
+          iconAnchor: [27, 27]
+        });
+        this.truckMarkerCitizen = L.marker([lat, lng], { icon: truckIcon }).addTo(this.citizenMap);
+      } else {
+        this.truckMarkerCitizen.setLatLng([lat, lng]);
+      }
+
+      this.truckMarkerCitizen.bindPopup(`
+        <div style="font-family:'Plus Jakarta Sans',sans-serif; padding:6px 2px;">
+          <div style="font-weight:900; color:#15803D; font-size:14px; margin-bottom:3px; display:flex; align-items:center; gap:5px;">
+            <span>🚚</span> Waste Collection Vehicle
+          </div>
+          <div style="font-size:11px; color:#475569;">Talegaon Municipal Sanitation • Active Area Route</div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" onclick="AudioAnnouncerEngine.triggerTestAnnouncement()" style="background:#DCFCE7; border:1px solid #86EFAC; color:#15803D; font-weight:800; font-size:11px; padding:4px 8px; border-radius:8px; cursor:pointer;">
+              🔊 Voice Alert
+            </button>
+            <button type="button" onclick="LeafletMapEngine.panToVehicle()" style="background:#F1F5F9; border:none; color:#475569; font-weight:700; font-size:11px; padding:4px 8px; border-radius:8px; cursor:pointer;">
+              🎯 Focus
+            </button>
+          </div>
+        </div>
+      `);
 
       const spdEl = document.getElementById('citizen-truck-speed-text');
       if (spdEl) spdEl.textContent = spdText;
