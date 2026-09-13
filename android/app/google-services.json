@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1034083253564",
+    "project_id": "cityassist-7bad3",
+    "storage_bucket": "cityassist-7bad3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1034083253564:android:b441432bfc68caee99f239",
+        "android_client_info": {
+          "package_name": "com.cityassist.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1034083253564-5s74ja0pmqae2ai9g9kndaj2p62lrmcp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiBAukd6JABiSy1n73ngbHCMF8CxKcrd0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1034083253564-5s74ja0pmqae2ai9g9kndaj2p62lrmcp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
