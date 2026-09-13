@@ -56,6 +56,12 @@ public class MainActivity extends BridgeActivity {
             WebView webView = getBridge().getWebView();
             WebSettings settings = webView.getSettings();
             settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setDomStorageEnabled(true);
+            settings.setDatabaseEnabled(true);
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+            try {
+                android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+            } catch (Exception ignored) {}
             
             // 1. Android Voice & Chime Bridge
             webView.addJavascriptInterface(new Object() {

@@ -890,6 +890,10 @@ const AuthEngine = {
           friendlyMsg = "SMS quota limit reached in Firebase console. Please contact admin.";
         } else if (err.code === 'auth/captcha-check-failed') {
           friendlyMsg = "reCAPTCHA check failed. Please retry.";
+        } else if (err.code === 'auth/network-request-failed' || (err.message && err.message.includes('network-request-failed'))) {
+          friendlyMsg = "Firebase SMS blocked or unreachable. In Firebase Console, enable India (+91) under Authentication → Settings → SMS Region Policy, or sign in using Continue with Google.";
+        } else if (err.message && err.message.includes('OPERATION_NOT_ALLOWED')) {
+          friendlyMsg = "SMS Region Disabled in Firebase. Enable India (+91) in Firebase Console (Authentication → Settings → SMS Region Policy).";
         } else if (err.message) {
           friendlyMsg = err.message;
         }
