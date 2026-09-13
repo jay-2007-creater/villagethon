@@ -767,21 +767,45 @@ const AuthEngine = {
    * Initialize Firebase reCAPTCHA for real SMS verification
    */
   setupRecaptcha() {
-    if (typeof firebase === 'undefined' || !firebase.auth) return;
-    if (!this.recaptchaVerifier) {
-      try {
-        this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-          size: 'invisible',
-          callback: (response) => {
-            console.log("reCAPTCHA verified successfully for phone auth.");
-          },
-          'expired-callback': () => {
-            console.warn("reCAPTCHA expired, resetting...");
+    if (typeof firebase === 'undefined' || !firebase.auth) return null;
+    
+    const container = document.getElementById('recaptcha-container') || 'recaptcha-container';
+    const appInstance = this.firebaseApp || (firebase.apps && firebase.apps.length ? firebase.app() : null);
+
+    try {
+      if (this.recaptchaVerifier) {
+        try {
+          this.recaptchaVerifier.clear();
+        } catch(e) {}
+        this.recaptchaVerifier = null;
+      }
+
+      this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(container, {
+        size: 'invisible',
+        callback: (response) => {
+          console.log("reCAPTCHA verified successfully for phone auth.");
+        },
+        'expired-callback': () => {
+          console.warn("reCAPTCHA expired, resetting...");
+          if (this.recaptchaVerifier) {
+            try { this.recaptchaVerifier.clear(); } catch(e) {}
             this.recaptchaVerifier = null;
           }
-        }, this.firebaseAuth);
-      } catch (err) {
-        console.warn("Error creating RecaptchaVerifier:", err);
+        }
+      }, appInstance);
+
+      return this.recaptchaVerifier;
+    } catch (err) {
+      console.warn("Error creating RecaptchaVerifier with app instance, retrying without app:", err);
+      try {
+        this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(container, {
+          size: 'invisible'
+        });
+        return this.recaptchaVerifier;
+      } catch (err2) {
+        console.error("Failed to create RecaptchaVerifier:", err2);
+        this.recaptchaVerifier = null;
+        return null;
       }
     }
   },
@@ -802,22 +826,34 @@ const AuthEngine = {
 
     this.pendingPhone = phone;
     const fullPhoneNumber = `+91${phone}`;
+    const primaryBtn = document.getElementById('auth-otp-primary-btn');
 
     // Real Firebase Phone Auth SMS
     if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
       try {
-        this.setupRecaptcha();
+        const verifier = this.setupRecaptcha();
+        if (!verifier) {
+          throw new Error("Unable to initialize reCAPTCHA security verifier. Please check your connection and retry.");
+        }
+
+        if (primaryBtn) {
+          primaryBtn.disabled = true;
+          primaryBtn.textContent = 'Sending SMS... ⏳';
+        }
+
         if (typeof CityAssist !== 'undefined') {
           CityAssist.showToast(`📱 Requesting SMS OTP via Firebase for +91 ${phone}...`);
         }
         
-        const confirmation = await this.firebaseAuth.signInWithPhoneNumber(fullPhoneNumber, this.recaptchaVerifier);
+        const confirmation = await this.firebaseAuth.signInWithPhoneNumber(fullPhoneNumber, verifier);
         this.confirmationResult = confirmation;
 
         const verifyBox = document.getElementById('auth-otp-verify-box');
-        const primaryBtn = document.getElementById('auth-otp-primary-btn');
         if (verifyBox) verifyBox.style.display = 'block';
-        if (primaryBtn) primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+        if (primaryBtn) {
+          primaryBtn.disabled = false;
+          primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+        }
 
         // Clear any previous OTP inputs
         for (let i = 1; i <= 6; i++) {
@@ -833,6 +869,11 @@ const AuthEngine = {
         return;
       } catch (err) {
         console.warn("Firebase Phone Auth SMS error:", err);
+        if (primaryBtn) {
+          primaryBtn.disabled = false;
+          primaryBtn.textContent = 'Send Verification OTP ➜';
+        }
+
         if (this.recaptchaVerifier) {
           try {
             this.recaptchaVerifier.clear();
