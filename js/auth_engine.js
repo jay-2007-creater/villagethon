@@ -29,11 +29,14 @@ const AuthEngine = {
   authorizedStaffRegistry: [
     {
       id: "MUNI-ADM-001",
+      userId: "admin_uid_001",
       name: "Prakash Deshmukh (Admin)",
       email: "admin@pmc.gov.in",
       phone: "+91 94220 88990",
       role: "admin",
       roleLabel: "TDMC Council Chief Administrator",
+      municipalityId: "TAL-PMC-01",
+      wardId: "all",
       assignedWard: "All Wards (Municipal HQ)",
       status: "approved",
       permissions: ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances'],
@@ -42,11 +45,14 @@ const AuthEngine = {
     },
     {
       id: "MUNI-OFF-201",
+      userId: "officer_uid_201",
       name: "Prakash Deshmukh",
       email: "deshmukh.officer@pmc.gov.in",
       phone: "+91 94220 88990",
       role: "officer",
       roleLabel: "Ward 2 Civic Officer",
+      municipalityId: "TAL-PMC-01",
+      wardId: 2,
       assignedWard: "Ward 2 Administrative Office",
       status: "approved",
       permissions: ['fleet_manage', 'publish_advisories', 'triage_grievances'],
@@ -55,6 +61,7 @@ const AuthEngine = {
     },
     {
       id: "MUNI-DRV-102",
+      userId: "driver_uid_102",
       name: "Ramesh Shinde",
       email: "ramesh.driver@pmc.gov.in",
       phone: "+91 98220 44556",
@@ -62,6 +69,7 @@ const AuthEngine = {
       roleLabel: "Municipal Fleet Driver",
       vehicleId: "GCV-002",
       vehicleNumber: "MH-12-EA-4920",
+      wardId: 2,
       assignedWard: "Ward 2 (Talegaon Dabhade)",
       assignedRoute: "Route 4B (Samta Colony & Sector 2)",
       status: "approved",
@@ -83,6 +91,23 @@ const AuthEngine = {
     this.loadStaffRegistryFromCache();
     this.initFirebase();
     this.restoreSession();
+  },
+
+  initFirebase() {
+    if (typeof firebase !== 'undefined' && firebase.apps) {
+      try {
+        if (!firebase.apps.length) {
+          this.firebaseApp = firebase.initializeApp(this.firebaseConfig);
+        } else {
+          this.firebaseApp = firebase.app();
+        }
+        if (firebase.auth) {
+          this.firebaseAuth = firebase.auth();
+        }
+      } catch (e) {
+        console.warn("Firebase Auth Engine initialization notice:", e);
+      }
+    }
   },
 
   loadStaffRegistryFromCache() {
@@ -109,56 +134,106 @@ const AuthEngine = {
   },
 
   /**
-   * Check if an account is authorized by the Municipality for Driver or Officer roles.
-   * If not approved, generates a pending verification request.
+   * Check if an account is authorized by the Municipality for Driver, Officer or Admin roles.
+   * Uses user's Firebase UID as primary identity, with verified email/phone fallback.
+   * Privilege escalation is impossible: accounts without approved status remain strictly citizens.
    */
-  async verifyStaffAuthorization(identifier, requestedRole, applicantName = '') {
-    if (!requestedRole || requestedRole === 'citizen') {
-      return { authorized: true, role: 'citizen', staffRecord: null };
-    }
-
+  async verifyStaffAuthorization(identifier = '', requestedRole = null, applicantName = '', uid = '') {
     const cleanId = (identifier || '').trim().toLowerCase();
     const cleanDigits = (identifier || '').replace(/\D/g, '');
+    const searchUid = (uid || '').trim();
 
-    // 1. Check local authorized staff registry
-    const match = this.authorizedStaffRegistry.find(s => {
-      const emailMatch = s.email && s.email.toLowerCase() === cleanId;
-      const phoneMatch = s.phone && s.phone.replace(/\D/g, '').endsWith(cleanDigits) && cleanDigits.length >= 10;
-      return (emailMatch || phoneMatch);
-    });
+    const evaluateStaffRecord = (s) => {
+      if (!s) return null;
+      if (s.status !== 'approved') {
+        if (s.status === 'pending') {
+          return { authorized: false, isPending: true, role: 'citizen', staffRecord: s };
+        }
+        return { authorized: false, role: 'citizen', staffRecord: s };
+      }
 
-    if (match) {
-      if (match.status === 'approved') {
-        return { 
-          authorized: true, 
-          role: match.role, 
-          staffRecord: match, 
-          permissions: match.permissions || ['triage_grievances', 'publish_advisories', 'fleet_manage'] 
-        };
-      } else if (match.status === 'pending') {
-        return { 
-          authorized: false, 
-          isPending: true, 
-          role: 'citizen', 
-          staffRecord: match 
+      // Validating Driver requirements
+      if (s.role === 'driver') {
+        const vid = s.vehicleId || s.vehicleNumber;
+        const wid = s.wardId !== undefined ? s.wardId : s.assignedWard;
+        if (!vid || wid === undefined) {
+          console.warn("Driver record incomplete: missing vehicleId or wardId", s);
+          return { authorized: false, role: 'citizen', staffRecord: s, error: "Missing vehicle or ward assignment" };
+        }
+        return {
+          authorized: true,
+          role: 'driver',
+          staffRecord: s,
+          permissions: s.permissions || ['driver_telemetry']
         };
       }
+
+      // Validating Officer requirements
+      if (s.role === 'officer') {
+        const muniId = s.municipalityId || 'TAL-PMC-01';
+        return {
+          authorized: true,
+          role: 'officer',
+          staffRecord: { ...s, municipalityId: muniId },
+          permissions: s.permissions || ['fleet_manage', 'publish_advisories', 'triage_grievances']
+        };
+      }
+
+      // Validating Admin requirements
+      if (s.role === 'admin') {
+        const muniId = s.municipalityId || 'TAL-PMC-01';
+        return {
+          authorized: true,
+          role: 'admin',
+          staffRecord: { ...s, municipalityId: muniId },
+          permissions: s.permissions || ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances']
+        };
+      }
+
+      return { authorized: false, role: 'citizen', staffRecord: s };
+    };
+
+    // 1. Check local authorized staff registry by UID first, then identifier
+    let match = null;
+    if (searchUid) {
+      match = this.authorizedStaffRegistry.find(s => s.userId === searchUid || s.id === searchUid);
+    }
+    if (!match && (cleanId || cleanDigits)) {
+      match = this.authorizedStaffRegistry.find(s => {
+        const emailMatch = s.email && s.email.toLowerCase() === cleanId;
+        const phoneMatch = s.phone && s.phone.replace(/\D/g, '').endsWith(cleanDigits) && cleanDigits.length >= 10;
+        return emailMatch || phoneMatch;
+      });
     }
 
-    // 2. Check Firestore `staff_registry` if online
+    if (match) {
+      const evalResult = evaluateStaffRecord(match);
+      if (evalResult) return evalResult;
+    }
+
+    // 2. Check Firestore `staff_registry` collection if online
     if (typeof firebase !== 'undefined' && firebase.firestore) {
       try {
         const db = firebase.firestore();
-        const snapshot = await db.collection('staff_registry')
-          .where('email', '==', cleanId)
-          .get();
+        if (searchUid) {
+          const docDirect = await db.collection('staff_registry').doc(searchUid).get();
+          if (docDirect.exists) {
+            const evalRes = evaluateStaffRecord(docDirect.data());
+            if (evalRes) return evalRes;
+          }
 
-        if (!snapshot.empty) {
-          const doc = snapshot.docs[0].data();
-          if (doc.status === 'approved') {
-            return { authorized: true, role: doc.role, staffRecord: doc, permissions: doc.permissions || [] };
-          } else if (doc.status === 'pending') {
-            return { authorized: false, isPending: true, role: 'citizen', staffRecord: doc };
+          const uidSnapshot = await db.collection('staff_registry').where('userId', '==', searchUid).get();
+          if (!uidSnapshot.empty) {
+            const evalRes = evaluateStaffRecord(uidSnapshot.docs[0].data());
+            if (evalRes) return evalRes;
+          }
+        }
+
+        if (cleanId && cleanId.includes('@')) {
+          const emailSnapshot = await db.collection('staff_registry').where('email', '==', cleanId).get();
+          if (!emailSnapshot.empty) {
+            const evalRes = evaluateStaffRecord(emailSnapshot.docs[0].data());
+            if (evalRes) return evalRes;
           }
         }
       } catch (e) {
@@ -166,32 +241,8 @@ const AuthEngine = {
       }
     }
 
-    // 3. User is NOT pre-approved: Create a PENDING verification request
-    const newPendingRequest = {
-      id: `REQ-STF-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: applicantName || (cleanId.includes('@') ? cleanId.split('@')[0] : `Applicant (+91 ${cleanDigits})`),
-      email: cleanId.includes('@') ? cleanId : '',
-      phone: cleanDigits.length >= 10 ? `+91 ${cleanDigits.slice(-10)}` : '',
-      role: requestedRole,
-      requestedRole: requestedRole,
-      roleLabel: requestedRole === 'driver' ? 'Applicant Driver (Pending)' : 'Applicant Officer (Pending)',
-      status: 'pending',
-      assignedWard: 'Ward 2 (Talegaon Dabhade)',
-      requestedAt: new Date().toISOString()
-    };
-
-    this.authorizedStaffRegistry.push(newPendingRequest);
-    this.saveStaffRegistryToCache();
-
-    // Also persist pending request to Firestore staff_registry
-    if (typeof firebase !== 'undefined' && firebase.firestore) {
-      try {
-        const db = firebase.firestore();
-        await db.collection('staff_registry').doc(newPendingRequest.id).set(newPendingRequest, { merge: true });
-      } catch (e) {}
-    }
-
-    return { authorized: false, isPending: true, role: 'citizen', staffRecord: newPendingRequest };
+    // 3. User is NOT in staff registry or not approved: Strictly a normal Citizen
+    return { authorized: false, role: 'citizen', staffRecord: null };
   },
 
   /**
@@ -199,53 +250,57 @@ const AuthEngine = {
    */
   async handleFirebaseUserLogin(user) {
     if (!user) return;
+    const uid = user.uid || `USR-FB-${Math.floor(1000 + Math.random() * 9000)}`;
     const name = user.displayName || (user.email ? user.email.split('@')[0] : "Resident Citizen");
     const email = user.email || "";
     const phone = user.phoneNumber || "";
     const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F7943&color=fff&size=200&bold=true`;
 
-    // Strict Role Verification: No self-assignment
-    const authCheck = await this.verifyStaffAuthorization(email || phone, this.selectedRole, name);
+    // Strict Role Verification using UID as primary identity: No self-assignment
+    const authCheck = await this.verifyStaffAuthorization(email || phone, null, name, uid);
 
     let assignedRole = 'citizen';
     let roleLabel = 'Resident Citizen';
-    let assignedVehicle = null;
+    let assignedVehicleId = null;
+    let assignedVehicleNumber = null;
     let assignedWard = 'Ward 2 (Talegaon Dabhade)';
+    let assignedWardId = 2;
+    let municipalityId = null;
     let permissions = [];
+    let staffStatus = 'none';
 
-    if (this.selectedRole !== 'citizen') {
-      if (authCheck.authorized) {
-        assignedRole = authCheck.role;
-        roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : (assignedRole === 'admin' ? 'Chief Administrator' : 'Civic Officer'));
-        assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
-        assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
-        permissions = authCheck.permissions || (assignedRole === 'admin' ? ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances'] : ['fleet_manage', 'publish_advisories', 'triage_grievances']);
-      } else if (authCheck.isPending) {
-        if (typeof CityAssist !== 'undefined') {
-          CityAssist.showToast(`⏳ Municipal application submitted. Awaiting TDMC Administrator verification.`);
-        }
-        assignedRole = 'citizen';
-        roleLabel = `Resident Citizen (Pending ${this.selectedRole.toUpperCase()} Verification)`;
-      } else {
-        if (typeof CityAssist !== 'undefined') {
-          CityAssist.showToast(`⚠️ Unauthorized for ${this.selectedRole.toUpperCase()} role. Signed in as Resident Citizen.`);
-        }
-        assignedRole = 'citizen';
-        roleLabel = 'Resident Citizen';
-      }
+    if (authCheck.authorized && authCheck.staffRecord) {
+      assignedRole = authCheck.role;
+      roleLabel = authCheck.staffRecord.roleLabel || (assignedRole === 'driver' ? 'Municipal Fleet Driver' : (assignedRole === 'admin' ? 'Chief Administrator' : 'Civic Officer'));
+      assignedVehicleId = authCheck.staffRecord.vehicleId || null;
+      assignedVehicleNumber = authCheck.staffRecord.vehicleNumber || null;
+      assignedWard = authCheck.staffRecord.assignedWard || assignedWard;
+      assignedWardId = authCheck.staffRecord.wardId !== undefined ? authCheck.staffRecord.wardId : assignedWardId;
+      municipalityId = authCheck.staffRecord.municipalityId || (assignedRole === 'officer' || assignedRole === 'admin' ? 'TAL-PMC-01' : null);
+      permissions = authCheck.permissions || [];
+      staffStatus = 'approved';
+    } else if (authCheck.isPending) {
+      assignedRole = 'citizen';
+      roleLabel = 'Resident Citizen (Pending Staff Verification)';
+      staffStatus = 'pending';
     }
 
     this.currentUser = {
-      id: user.uid || `USR-FB-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: uid,
+      uid: uid,
       name: authCheck.staffRecord?.name || name,
       phone: phone,
       email: email,
       role: assignedRole,
       roleLabel: roleLabel,
       ward: assignedWard,
-      vehicleNumber: assignedVehicle,
+      wardId: assignedWardId,
+      vehicleId: assignedVehicleId,
+      vehicleNumber: assignedVehicleNumber,
+      municipalityId: municipalityId,
       permissions: permissions,
-      staffStatus: authCheck.authorized ? 'approved' : (authCheck.isPending ? 'pending' : 'none'),
+      staffStatus: staffStatus,
+      approved: staffStatus === 'approved',
       address: "Talegaon Dabhade, Pune",
       avatar: authCheck.staffRecord?.avatar || avatar,
       points: 0,
@@ -257,13 +312,14 @@ const AuthEngine = {
 
     this.saveSession();
     this.syncProfileToFirestore();
+    this.updateRoleUI();
 
     if (typeof CityAssist !== 'undefined') {
       CityAssist.closeModal();
-      if (authCheck.isPending) {
-        CityAssist.showToast(`⏳ Verification Pending: Logged in as Citizen while administrator verifies your staff application.`);
+      if (staffStatus === 'approved') {
+        CityAssist.showToast(`✓ Welcome, ${this.currentUser.name} (${this.currentUser.role.toUpperCase()}) 🛡️`);
       } else {
-        CityAssist.showToast(`✓ Welcome, ${this.currentUser.name}! Authenticated securely 🌐`);
+        CityAssist.showToast(`✓ Welcome, ${this.currentUser.name}! Authenticated as Resident Citizen.`);
       }
       this.routeAfterAuth();
     }
@@ -440,6 +496,7 @@ const AuthEngine = {
       this.currentUser = null;
     }
     this.syncUserWithApp();
+    this.updateRoleUI();
   },
 
   saveSession() {
@@ -451,6 +508,7 @@ const AuthEngine = {
       localStorage.removeItem('cityassist_is_logged_in');
     }
     this.syncUserWithApp();
+    this.updateRoleUI();
   },
 
   isLoggedIn() {
@@ -460,17 +518,68 @@ const AuthEngine = {
   isAuthorizedForRole(role) {
     if (!this.currentUser) return false;
     const userRole = (this.currentUser.role || 'citizen').toLowerCase();
-    
+    const isApproved = (this.currentUser.staffStatus === 'approved' || this.currentUser.approved === true);
+
     if (role === 'admin') {
-      return userRole === 'admin';
+      return userRole === 'admin' && isApproved;
     }
     if (role === 'officer' || role === 'municipality') {
-      return userRole === 'officer' || userRole === 'municipality' || userRole === 'admin';
+      // Drivers cannot access Municipality Dashboard!
+      if (userRole === 'driver') return false;
+      return (userRole === 'officer' || userRole === 'admin') && isApproved;
     }
     if (role === 'driver') {
-      return userRole === 'driver' || userRole === 'officer' || userRole === 'municipality' || userRole === 'admin';
+      // Driver must have approved staff status AND assigned vehicleId AND assigned wardId
+      if (userRole === 'driver') {
+        const hasVehicle = !!(this.currentUser.vehicleId || this.currentUser.vehicleNumber);
+        const hasWard = !!(this.currentUser.wardId !== undefined || this.currentUser.ward || this.currentUser.assignedWard);
+        return isApproved && hasVehicle && hasWard;
+      }
+      return false;
     }
-    return true; // Citizen access is open to all authenticated users
+    if (role === 'citizen') {
+      return true; // Citizen access is open to all authenticated users
+    }
+    return false;
+  },
+
+  /**
+   * Dynamically update UI elements based on authorized RBAC role
+   */
+  updateRoleUI() {
+    const isApprovedDriver = this.isAuthorizedForRole('driver');
+    const isApprovedOfficer = this.isAuthorizedForRole('officer');
+    const isApprovedAdmin = this.isAuthorizedForRole('admin');
+
+    // 1. Driver navigation elements
+    document.querySelectorAll('.driver-nav-highlight, .driver-nav-item').forEach(el => {
+      el.style.display = isApprovedDriver ? '' : 'none';
+    });
+
+    // 2. Municipality / Officer navigation elements
+    document.querySelectorAll('.municipality-nav-highlight, .municipality-nav-item').forEach(el => {
+      el.style.display = (isApprovedOfficer || isApprovedAdmin) ? '' : 'none';
+    });
+
+    // 3. Dividers
+    document.querySelectorAll('.staff-drawer-divider').forEach(el => {
+      el.style.display = (isApprovedDriver || isApprovedOfficer || isApprovedAdmin) ? '' : 'none';
+    });
+
+    // 4. Admin-only settings / tools
+    document.querySelectorAll('.admin-settings-item, .admin-settings-divider, .admin-only').forEach(el => {
+      el.style.display = isApprovedAdmin ? '' : 'none';
+    });
+
+    // 5. If user is currently on an unauthorized screen, redirect immediately
+    if (typeof CityAssist !== 'undefined') {
+      const cur = CityAssist.currentScreen;
+      if (cur === 'driver' && !isApprovedDriver) {
+        CityAssist.navigateTo('home');
+      } else if (cur === 'municipality' && !isApprovedOfficer && !isApprovedAdmin) {
+        CityAssist.navigateTo(isApprovedDriver ? 'driver' : 'home');
+      }
+    }
   },
 
   getCurrentRole() {
@@ -781,24 +890,28 @@ const AuthEngine = {
       const nameInput = document.getElementById('auth-phone-name');
       const customName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : `Resident (+91 ${this.pendingPhone})`;
       
-      const authCheck = await this.verifyStaffAuthorization(this.pendingPhone, this.selectedRole);
+      const authCheck = await this.verifyStaffAuthorization(this.pendingPhone);
 
       let assignedRole = 'citizen';
       let roleLabel = 'Resident Citizen';
       let assignedVehicle = null;
+      let assignedVehicleId = null;
       let assignedWard = 'Ward 2 (Talegaon Dabhade)';
+      let assignedWardId = 2;
+      let municipalityId = null;
+      let permissions = [];
+      let staffStatus = 'none';
 
-      if (this.selectedRole !== 'citizen') {
-        if (authCheck.authorized) {
-          assignedRole = authCheck.role;
-          roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : 'Civic Officer');
-          assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
-          assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
-        } else {
-          if (typeof CityAssist !== 'undefined') {
-            CityAssist.showToast(`⚠️ Unauthorized for ${this.selectedRole.toUpperCase()} role. Signed in as Resident Citizen.`);
-          }
-        }
+      if (authCheck.authorized && authCheck.staffRecord) {
+        assignedRole = authCheck.role;
+        roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Fleet Driver' : (assignedRole === 'admin' ? 'Chief Administrator' : 'Civic Officer'));
+        assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
+        assignedVehicleId = authCheck.staffRecord?.vehicleId || null;
+        assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
+        assignedWardId = authCheck.staffRecord?.wardId !== undefined ? authCheck.staffRecord.wardId : assignedWardId;
+        municipalityId = authCheck.staffRecord?.municipalityId || null;
+        permissions = authCheck.permissions || [];
+        staffStatus = 'approved';
       }
 
       this.currentUser = {
@@ -809,7 +922,13 @@ const AuthEngine = {
         role: assignedRole,
         roleLabel: roleLabel,
         ward: assignedWard,
+        wardId: assignedWardId,
+        vehicleId: assignedVehicleId,
         vehicleNumber: assignedVehicle,
+        municipalityId: municipalityId,
+        permissions: permissions,
+        staffStatus: staffStatus,
+        approved: staffStatus === 'approved',
         address: "Talegaon Dabhade, Pune",
         avatar: authCheck.staffRecord?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(customName)}&background=0F7943&color=fff&size=200&bold=true`,
         points: 0,
@@ -821,6 +940,7 @@ const AuthEngine = {
 
       this.saveSession();
       this.syncProfileToFirestore();
+      this.updateRoleUI();
 
       if (typeof CityAssist !== 'undefined') {
         CityAssist.showToast(`✓ Phone Verified! Welcome, ${this.currentUser.name} 🎉`);
@@ -919,25 +1039,29 @@ const AuthEngine = {
         }
       }
 
-      // Check Staff Authorization for Driver / Officer
-      const authCheck = await this.verifyStaffAuthorization(email, this.selectedRole);
+      // Check Staff Authorization for Driver / Officer / Admin
+      const authCheck = await this.verifyStaffAuthorization(email);
 
       let assignedRole = 'citizen';
       let roleLabel = 'Resident Citizen';
       let assignedVehicle = null;
+      let assignedVehicleId = null;
       let assignedWard = 'Ward 2 (Talegaon Dabhade)';
+      let assignedWardId = 2;
+      let municipalityId = null;
+      let permissions = [];
+      let staffStatus = 'none';
 
-      if (this.selectedRole !== 'citizen') {
-        if (authCheck.authorized) {
-          assignedRole = authCheck.role;
-          roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : 'Civic Officer');
-          assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
-          assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
-        } else {
-          if (typeof CityAssist !== 'undefined') {
-            CityAssist.showToast(`⚠️ Account not in Municipal Staff Registry for ${this.selectedRole.toUpperCase()}. Signed in as Resident.`);
-          }
-        }
+      if (authCheck.authorized && authCheck.staffRecord) {
+        assignedRole = authCheck.role;
+        roleLabel = authCheck.staffRecord?.roleLabel || (assignedRole === 'driver' ? 'Municipal Driver' : (assignedRole === 'admin' ? 'Chief Administrator' : 'Civic Officer'));
+        assignedVehicle = authCheck.staffRecord?.vehicleNumber || null;
+        assignedVehicleId = authCheck.staffRecord?.vehicleId || null;
+        assignedWard = authCheck.staffRecord?.assignedWard || assignedWard;
+        assignedWardId = authCheck.staffRecord?.wardId !== undefined ? authCheck.staffRecord.wardId : assignedWardId;
+        municipalityId = authCheck.staffRecord?.municipalityId || (assignedRole === 'officer' || assignedRole === 'admin' ? 'TAL-PMC-01' : null);
+        permissions = authCheck.permissions || [];
+        staffStatus = 'approved';
       }
 
       this.currentUser = {
@@ -948,7 +1072,13 @@ const AuthEngine = {
         role: assignedRole,
         roleLabel: roleLabel,
         ward: assignedWard,
+        wardId: assignedWardId,
+        vehicleId: assignedVehicleId,
         vehicleNumber: assignedVehicle,
+        municipalityId: municipalityId,
+        permissions: permissions,
+        staffStatus: staffStatus,
+        approved: staffStatus === 'approved',
         address: "Talegaon Dabhade, Pune",
         avatar: authCheck.staffRecord?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=0F7943&color=fff`,
         points: 0,
@@ -960,6 +1090,8 @@ const AuthEngine = {
 
       this.saveSession();
       this.syncProfileToFirestore();
+      this.updateRoleUI();
+
       if (typeof CityAssist !== 'undefined') {
         CityAssist.showToast(`✓ Welcome, ${this.currentUser.name}!`);
         this.routeAfterAuth();
@@ -1000,10 +1132,10 @@ const AuthEngine = {
    */
   routeAfterAuth() {
     if (typeof CityAssist === 'undefined') return;
-    const role = (this.currentUser && this.currentUser.role) || 'citizen';
-    if (role === 'driver') {
+    this.updateRoleUI();
+    if (this.isAuthorizedForRole('driver')) {
       CityAssist.navigateTo('driver');
-    } else if (role === 'officer' || role === 'municipality' || role === 'admin') {
+    } else if (this.isAuthorizedForRole('officer') || this.isAuthorizedForRole('admin')) {
       CityAssist.navigateTo('municipality');
     } else {
       CityAssist.navigateTo('home');
@@ -1023,6 +1155,8 @@ const AuthEngine = {
         this.firebaseAuth.signOut().catch(() => {});
       } catch (e) {}
     }
+
+    this.updateRoleUI();
 
     if (typeof CityAssist !== 'undefined') {
       CityAssist.closeModal();

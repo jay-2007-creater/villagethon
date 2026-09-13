@@ -61,8 +61,8 @@
               </div>
 
               <div class="auth-content-card">
-                <!-- Role Selection -->
-                <div class="auth-role-select-box">
+                <!-- Role Selection (Hidden: Staff access requires manual backend approval) -->
+                <div class="auth-role-select-box" style="display: none !important;">
                   <label class="auth-field-label" data-i18n="auth_select_role">Select Your Role</label>
                   <div class="auth-role-tabs">
                     <button type="button" class="auth-role-tab active" id="auth-role-btn-citizen" onclick="AuthEngine.switchAuthRole('citizen')">
@@ -2866,7 +2866,7 @@
                 <span>About Us</span>
               </li>
 
-              <li class="drawer-nav-item driver-nav-highlight" onclick="CityAssist.navigateTo('driver'); CityAssist.closeDrawer();">
+              <li class="drawer-nav-item driver-nav-highlight" style="display: none;" onclick="CityAssist.navigateTo('driver'); CityAssist.closeDrawer();">
                 <div class="drawer-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="1" y="3" width="15" height="13" rx="2"/>
@@ -2878,7 +2878,7 @@
                 <span style="color:#D97706; font-weight:800;">Switch to Driver Mode</span>
               </li>
 
-              <li class="drawer-nav-item municipality-nav-highlight" onclick="CityAssist.navigateTo('municipality'); CityAssist.closeDrawer();">
+              <li class="drawer-nav-item municipality-nav-highlight" style="display: none;" onclick="CityAssist.navigateTo('municipality'); CityAssist.closeDrawer();">
                 <div class="drawer-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>
@@ -2997,15 +2997,15 @@
               <span style="color:#15803D; font-weight:800;">🌐 Change Language / भाषा</span>
               <span class="drawer-lang-badge" id="drawer-lang-badge" style="background:#15803D; color:#FFF; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:8px;">English</span>
             </a>
-            <div style="height:1px; background:#E2E8F0; margin:8px 0;"></div>
-            <a href="javascript:void(0)" class="drawer-nav-item" onclick="CityAssist.navigateTo('driver')">
+            <div class="staff-drawer-divider" style="display: none; height:1px; background:#E2E8F0; margin:8px 0;"></div>
+            <a href="javascript:void(0)" class="drawer-nav-item driver-nav-item" style="display: none;" onclick="CityAssist.navigateTo('driver')">
               <span>🚚 Municipal Driver Portal</span>
             </a>
-            <a href="javascript:void(0)" class="drawer-nav-item" onclick="CityAssist.navigateTo('municipality')">
+            <a href="javascript:void(0)" class="drawer-nav-item municipality-nav-item" style="display: none;" onclick="CityAssist.navigateTo('municipality')">
               <span>🏛️ Municipal Command Center</span>
             </a>
-            <div style="height:1px; background:#E2E8F0; margin:8px 0;"></div>
-            <a href="javascript:void(0)" class="drawer-nav-item" onclick="CityAssist.openCloudSettingsModal()">
+            <div class="admin-settings-divider" style="display: none; height:1px; background:#E2E8F0; margin:8px 0;"></div>
+            <a href="javascript:void(0)" class="drawer-nav-item admin-settings-item" style="display: none;" onclick="CityAssist.openCloudSettingsModal()">
               <span>⚡ Cloud Realtime & Maps Settings</span>
             </a>
           </nav>

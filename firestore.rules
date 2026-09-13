@@ -7,6 +7,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper function to check if user has admin privileges
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.isAdmin == true
+      );
+    }
+
     // Helper function to check if user has municipal officer / admin custom claims
     // Strictly requires cryptographic custom claims; email domain regex is NOT permitted
     function isOfficer() {
@@ -60,8 +68,17 @@ service cloud.firestore {
       // Citizens can update ONLY explicitly user-editable fields (name, phone, address, photo, fcmToken, notificationsEnabled).
       // System-controlled fields are strictly immutable to citizens:
       // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
-      allow update: if isAuthenticated() && request.auth.uid == userId && (
-        isOfficer() || (
+      // Citizens can update ONLY explicitly user-editable fields (name, phone, address, photo, fcmToken, notificationsEnabled).
+      // System-controlled fields are strictly immutable to non-admin users:
+      // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
+      // An officer CANNOT change their own role to admin.
+      allow update: if isAuthenticated() && (
+        isAdmin() || (
+          isOfficer() && request.auth.uid != userId &&
+          (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true) &&
+          (!('role' in request.resource.data) || request.resource.data.role != 'admin')
+        ) || (
+          request.auth.uid == userId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 
             'fcmToken', 'updatedAt', 'lastLoginAt', 'notificationsEnabled', 'email'
@@ -74,6 +91,8 @@ service cloud.firestore {
           (!('staffStatus' in resource.data) || request.resource.data.staffStatus == resource.data.staffStatus) &&
           (!('isStaff' in resource.data) || request.resource.data.isStaff == resource.data.isStaff) &&
           (!('permissions' in resource.data) || request.resource.data.permissions == resource.data.permissions) &&
+          (!('isAdmin' in resource.data) || request.resource.data.isAdmin == resource.data.isAdmin) &&
+          (!('isOfficer' in resource.data) || request.resource.data.isOfficer == resource.data.isOfficer) &&
           (!('municipality' in resource.data) || request.resource.data.municipality == resource.data.municipality) &&
           (!('municipalityId' in resource.data) || request.resource.data.municipalityId == resource.data.municipalityId)
         )
@@ -117,8 +136,13 @@ service cloud.firestore {
         )
       );
 
-      // Only authorized Municipal Admins/Officers can approve, assign roles, or delete staff records
-      allow update, delete: if isOfficer();
+      // Only authorized Municipal Admins can assign admin role; officers cannot promote themselves to admin
+      allow update, delete: if isAdmin() || (
+        isOfficer() &&
+        resource.data.userId != request.auth.uid &&
+        (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true) &&
+        (!('role' in request.resource.data) || request.resource.data.role != 'admin')
+      );
     }
 
     // 3. Citizen Grievances Collection

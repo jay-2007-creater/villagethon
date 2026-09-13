@@ -720,27 +720,41 @@ const GPSTrackerEngine = {
    */
   /**
    * Synchronize Driver Mode with Municipality-Assigned Vehicle
-   * Ensures drivers cannot manually claim other vehicles; assignment is controlled by the Municipality.
+   * Ensures drivers cannot manually claim other vehicles; assignment is strictly controlled by the Municipality.
    */
   syncDriverAssignment() {
-    let assignedVid = 'GCV-002';
-
-    if (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser) {
-      if (AuthEngine.currentUser.vehicleId) {
-        assignedVid = AuthEngine.currentUser.vehicleId;
-      } else if (AuthEngine.currentUser.vehicleNumber) {
-        const match = CityData.municipality.fleetVehicles.find(v => v.licensePlate === AuthEngine.currentUser.vehicleNumber);
-        if (match) assignedVid = match.vehicleId;
-      }
+    if (typeof AuthEngine === 'undefined') return;
+    if (!AuthEngine.isAuthorizedForRole('driver')) {
+      console.warn("Unauthorized driver assignment sync ignored");
+      return;
     }
 
-    this.setDriverVehicle(assignedVid, true);
+    const u = AuthEngine.currentUser;
+    let assignedVid = u.vehicleId || null;
+    if (!assignedVid && u.vehicleNumber && typeof CityData !== 'undefined' && CityData.municipality && CityData.municipality.fleetVehicles) {
+      const match = CityData.municipality.fleetVehicles.find(v => v.licensePlate === u.vehicleNumber);
+      if (match) assignedVid = match.vehicleId;
+    }
+
+    if (assignedVid) {
+      this.setDriverVehicle(assignedVid, true);
+    }
   },
 
   /**
    * Set the active vehicle for Driver Mode (Enforced by Municipality Assignment)
    */
   setDriverVehicle(vehicleId, isSystemSync = false) {
+    if (!isSystemSync && typeof AuthEngine !== 'undefined') {
+      const u = AuthEngine.currentUser;
+      if (!u || !AuthEngine.isAuthorizedForRole('driver') || (u.vehicleId && u.vehicleId !== vehicleId)) {
+        if (typeof CityAssist !== 'undefined') {
+          CityAssist.showToast("⛔ Unauthorized: You cannot claim another vehicle.");
+        }
+        return;
+      }
+    }
+
     if (typeof CityData !== 'undefined' && CityData.municipality && CityData.municipality.fleetVehicles) {
       const v = CityData.municipality.fleetVehicles.find(item => item.vehicleId === vehicleId) || CityData.municipality.fleetVehicles[1];
       if (v) {

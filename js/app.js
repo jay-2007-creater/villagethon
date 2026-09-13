@@ -24,11 +24,11 @@ const CityAssist = {
     this.syncActiveAddressUI();
     if (typeof AuthEngine !== 'undefined') {
       AuthEngine.restoreSession();
+      AuthEngine.updateRoleUI();
       if (AuthEngine.isLoggedIn()) {
-        const role = (AuthEngine.currentUser && AuthEngine.currentUser.role) || 'citizen';
-        if (role === 'driver') {
+        if (AuthEngine.isAuthorizedForRole('driver')) {
           this.navigateTo('driver');
-        } else if (role === 'officer') {
+        } else if (AuthEngine.isAuthorizedForRole('officer') || AuthEngine.isAuthorizedForRole('admin')) {
           this.navigateTo('municipality');
         } else {
           this.navigateTo('home');
@@ -124,13 +124,28 @@ const CityAssist = {
 
     // Production Security Role Guard: Verify authorization for restricted officer/driver screens
     if (typeof AuthEngine !== 'undefined') {
-      if (screenId === 'municipality' && !AuthEngine.isAuthorizedForRole('officer')) {
-        this.promptRoleAuthorization('officer', 'Talegaon Municipal Command Center requires Municipal Officer credentials.');
-        return;
+      if (screenId === 'municipality') {
+        if (!AuthEngine.isAuthorizedForRole('officer') && !AuthEngine.isAuthorizedForRole('admin')) {
+          this.closeDrawer();
+          this.closeModal();
+          this.showToast("⛔ Access Denied: Municipal Officer access only.");
+          const fallback = AuthEngine.isAuthorizedForRole('driver') ? 'driver' : 'home';
+          if (this.currentScreen !== fallback) {
+            this.navigateTo(fallback);
+          }
+          return;
+        }
       }
-      if (screenId === 'driver' && !AuthEngine.isAuthorizedForRole('driver')) {
-        this.promptRoleAuthorization('driver', 'Driver HUD requires an active Municipal Sanitation Driver session.');
-        return;
+      if (screenId === 'driver') {
+        if (!AuthEngine.isAuthorizedForRole('driver')) {
+          this.closeDrawer();
+          this.closeModal();
+          this.showToast("⛔ Access Denied: Approved Municipal Driver session required.");
+          if (this.currentScreen !== 'home') {
+            this.navigateTo('home');
+          }
+          return;
+        }
       }
     }
 
