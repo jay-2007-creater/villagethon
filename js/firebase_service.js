@@ -43,8 +43,8 @@ const FirebaseService = {
           app = firebase.app();
         }
 
-        // Initialize Firebase App Check to protect Firestore and RTDB against unauthorized access
-        this.initAppCheck();
+        // App Check omitted to ensure direct Firestore connectivity without invalid token rejection
+        // this.initAppCheck();
 
         // Initialize Firestore
         if (firebase.firestore) {

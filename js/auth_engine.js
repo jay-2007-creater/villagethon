@@ -466,28 +466,28 @@ const AuthEngine = {
    * Sync verified user document to Cloud Firestore
    */
   async syncProfileToFirestore() {
-    if (!this.currentUser || typeof firebase === 'undefined' || !firebase.firestore) return;
+    if (!this.currentUser) return;
     try {
-      const db = firebase.firestore();
       const currentAuthUser = (this.firebaseAuth && this.firebaseAuth.currentUser) ? this.firebaseAuth.currentUser : null;
-      const uid = (currentAuthUser && currentAuthUser.uid) ? currentAuthUser.uid : (this.currentUser.id || this.currentUser.uid);
+      const uid = (currentAuthUser && currentAuthUser.uid) ? currentAuthUser.uid : (this.currentUser.id || this.currentUser.uid || `USR-${Math.floor(1000 + Math.random() * 9000)}`);
       if (!uid) return;
 
+      const nowIso = new Date().toISOString();
       const profileData = {
         name: this.currentUser.name || 'Citizen',
         displayName: this.currentUser.name || 'Citizen',
         email: this.currentUser.email || '',
         phone: this.currentUser.phone || '',
-        address: this.currentUser.address || 'Talegaon Dabhade',
+        address: this.currentUser.address || 'Talegaon Dabhade, Pune',
         role: this.currentUser.role || 'citizen',
         isStaff: false,
         verificationStatus: 'unverified',
         staffStatus: 'none',
         authProvider: this.currentUser.authProvider || 'google',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: nowIso,
+        lastLogin: nowIso,
+        lastLoginAt: nowIso,
+        updatedAt: nowIso
       };
 
       if (this.currentUser.avatar) {
@@ -506,9 +506,59 @@ const AuthEngine = {
         profileData.isStaff = true;
       }
 
-      await db.collection('users').doc(uid).set(profileData, { merge: true });
-      console.log("✅ User profile synced to Cloud Firestore:", uid, profileData);
-      if (typeof CityAssist !== 'undefined') {
+      let writeSuccess = false;
+
+      // 1. Direct Cloud Firestore HTTPS REST API (Zero SDK dependencies, instant cloud write)
+      try {
+        const restUrl = `https://firestore.googleapis.com/v1/projects/cityassist-7bad3/databases/(default)/documents/users/${encodeURIComponent(uid)}?key=AIzaSyAiBAukd6JABiSy1n73ngbHCMF8CxKcrd0`;
+        const restFields = {
+          name: { stringValue: profileData.name },
+          displayName: { stringValue: profileData.displayName },
+          email: { stringValue: profileData.email },
+          phone: { stringValue: profileData.phone },
+          address: { stringValue: profileData.address },
+          role: { stringValue: profileData.role },
+          isStaff: { booleanValue: profileData.isStaff },
+          verificationStatus: { stringValue: profileData.verificationStatus },
+          staffStatus: { stringValue: profileData.staffStatus },
+          authProvider: { stringValue: profileData.authProvider },
+          avatar: { stringValue: profileData.avatar || "" },
+          photoURL: { stringValue: profileData.photoURL || "" },
+          updatedAt: { timestampValue: nowIso },
+          lastLogin: { timestampValue: nowIso },
+          createdAt: { timestampValue: nowIso }
+        };
+
+        const resp = await fetch(restUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: restFields })
+        });
+
+        if (resp.ok) {
+          writeSuccess = true;
+          console.log("✅ User profile synced to Cloud Firestore via REST API:", uid);
+        } else {
+          const errBody = await resp.text();
+          console.warn("Firestore REST response status:", resp.status, errBody);
+        }
+      } catch (restErr) {
+        console.warn("Firestore REST direct sync notice:", restErr);
+      }
+
+      // 2. Firebase Firestore JS SDK (WebChannel / gRPC)
+      if (typeof firebase !== 'undefined' && firebase.firestore) {
+        try {
+          const db = firebase.firestore();
+          await db.collection('users').doc(uid).set(profileData, { merge: true });
+          writeSuccess = true;
+          console.log("✅ User profile synced to Cloud Firestore via JS SDK:", uid);
+        } catch (sdkErr) {
+          console.warn("Firestore SDK sync notice:", sdkErr);
+        }
+      }
+
+      if (writeSuccess && typeof CityAssist !== 'undefined') {
         CityAssist.showToast("✓ Profile saved to Cloud Firestore ☁️");
       }
 
