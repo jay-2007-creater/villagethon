@@ -37,18 +37,9 @@ public class MainActivity extends BridgeActivity {
             }
         });
 
-        // Configure Google Sign-In options with ID Token for Firebase Authentication
+        // Configure Google Sign-In options (Reliable Native Profile & Email)
         try {
-            String webClientId = "1034083253564-5s74ja0pmqae2ai9g9kndaj2p62lrmcp.apps.googleusercontent.com";
-            try {
-                int resId = getResources().getIdentifier("default_web_client_id", "string", getPackageName());
-                if (resId != 0) {
-                    webClientId = getString(resId);
-                }
-            } catch (Exception ignored) {}
-
             GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(webClientId)
                 .requestEmail()
                 .requestProfile()
                 .build();
@@ -181,10 +172,12 @@ public class MainActivity extends BridgeActivity {
                 }
             } catch (ApiException e) {
                 e.printStackTrace();
+                int statusCode = e.getStatusCode();
                 runOnUiThread(() -> {
                     if (getBridge() != null && getBridge().getWebView() != null) {
+                        String errMsg = (statusCode == 12501 || statusCode == 16) ? "Google Sign-In canceled" : String.format("Google Sign-In notice (%d)", statusCode);
                         getBridge().getWebView().evaluateJavascript(
-                            "if (typeof CityAssist !== 'undefined') { CityAssist.showToast('Google Sign-In canceled or failed'); }",
+                            String.format("if (typeof CityAssist !== 'undefined') { CityAssist.showToast('%s'); }", errMsg),
                             null
                         );
                     }
