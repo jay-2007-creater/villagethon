@@ -480,7 +480,11 @@ const AuthEngine = {
         phone: this.currentUser.phone || '',
         address: this.currentUser.address || 'Talegaon Dabhade',
         role: this.currentUser.role || 'citizen',
+        isStaff: false,
+        verificationStatus: 'unverified',
+        staffStatus: 'none',
         authProvider: this.currentUser.authProvider || 'google',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
         lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -499,12 +503,26 @@ const AuthEngine = {
         if (this.currentUser.municipalityId) profileData.municipalityId = this.currentUser.municipalityId;
         if (this.currentUser.permissions && this.currentUser.permissions.length > 0) profileData.permissions = this.currentUser.permissions;
         profileData.staffStatus = 'approved';
+        profileData.isStaff = true;
       }
 
       await db.collection('users').doc(uid).set(profileData, { merge: true });
       console.log("✅ User profile synced to Cloud Firestore:", uid, profileData);
       if (typeof CityAssist !== 'undefined') {
         CityAssist.showToast("✓ Profile saved to Cloud Firestore ☁️");
+      }
+
+      // Attach auth state observer to re-sync if Firebase Auth user becomes ready
+      if (this.firebaseAuth && !this._authObserverAttached) {
+        this._authObserverAttached = true;
+        this.firebaseAuth.onAuthStateChanged((user) => {
+          if (user && this.currentUser && this.currentUser.id !== user.uid) {
+            this.currentUser.id = user.uid;
+            this.currentUser.uid = user.uid;
+            this.saveSession();
+            this.syncProfileToFirestore();
+          }
+        });
       }
     } catch (e) {
       console.error("Firestore user sync error:", e);
@@ -1355,7 +1373,7 @@ const AuthEngine = {
   /**
    * Handle real Native Android Google Sign-In response from AndroidGoogleAuthBridge
    */
-  async handleNativeGoogleUserLogin(name, email, photoUrl, uid) {
+  async handleNativeGoogleUserLogin(name, email, photoUrl, uid, idToken = '') {
     if (!email && !uid) return;
     const cleanName = name || (email ? email.split('@')[0] : "Resident Citizen");
     const avatar = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0F7943&color=fff&size=200&bold=true`;
@@ -1363,14 +1381,29 @@ const AuthEngine = {
 
     let fbUser = null;
     if (this.firebaseAuth) {
-      // 1. Check if user already has an active Firebase session
-      if (this.firebaseAuth.currentUser) {
+      // 1. If real Google ID token was provided, sign in directly to Firebase Auth using GoogleAuthProvider
+      if (idToken && typeof firebase !== 'undefined' && firebase.auth) {
+        try {
+          if (typeof CityAssist !== 'undefined') {
+            CityAssist.showToast("Authenticating with Google & Firebase... 🔐");
+          }
+          const credential = firebase.auth.GoogleAuthProvider.credential(idToken);
+          const cred = await this.firebaseAuth.signInWithCredential(credential);
+          if (cred && cred.user) {
+            fbUser = cred.user;
+            console.log("✅ Authenticated with Firebase via Google ID Token:", fbUser.uid);
+          }
+        } catch (tokenErr) {
+          console.warn("Firebase Google credential sign-in error:", tokenErr);
+        }
+      }
+
+      // 2. Check if user already has an active Firebase session
+      if (!fbUser && this.firebaseAuth.currentUser) {
         fbUser = this.firebaseAuth.currentUser;
       }
 
-      // 2. Authenticate user into Firebase Auth using verified Google email
-      // Since Email/Password provider IS enabled in Firebase console, we register/sign in the user
-      // with a deterministic app secret derived from Google ID so they are permanently stored in Firebase Authentication!
+      // 3. Authenticate user into Firebase Auth using verified Google email
       if (!fbUser && email) {
         const secureKey = `CityAssist_Ggl_${googleId}_Secured!`;
         try {
@@ -1390,7 +1423,7 @@ const AuthEngine = {
         }
       }
 
-      // 3. Fallback to anonymous sign-in if enabled in console
+      // 4. Fallback to anonymous sign-in if enabled in console
       if (!fbUser) {
         try {
           const anonCred = await this.firebaseAuth.signInAnonymously();

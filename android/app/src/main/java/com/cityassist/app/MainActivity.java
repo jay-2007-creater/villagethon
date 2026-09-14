@@ -37,9 +37,18 @@ public class MainActivity extends BridgeActivity {
             }
         });
 
-        // Configure Google Sign-In options
+        // Configure Google Sign-In options with ID Token for Firebase Authentication
         try {
+            String webClientId = "1034083253564-5s74ja0pmqae2ai9g9kndaj2p62lrmcp.apps.googleusercontent.com";
+            try {
+                int resId = getResources().getIdentifier("default_web_client_id", "string", getPackageName());
+                if (resId != 0) {
+                    webClientId = getString(resId);
+                }
+            } catch (Exception ignored) {}
+
             GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
                 .requestEmail()
                 .requestProfile()
                 .build();
@@ -158,12 +167,13 @@ public class MainActivity extends BridgeActivity {
                     String email = account.getEmail() != null ? account.getEmail() : "";
                     String photo = account.getPhotoUrl() != null ? account.getPhotoUrl().toString() : "";
                     String id = account.getId() != null ? account.getId() : "";
+                    String idToken = account.getIdToken() != null ? account.getIdToken() : "";
                     
                     runOnUiThread(() -> {
                         if (getBridge() != null && getBridge().getWebView() != null) {
                             String js = String.format(
-                                "if (typeof AuthEngine !== 'undefined') { AuthEngine.handleNativeGoogleUserLogin('%s', '%s', '%s', '%s'); }",
-                                name.replace("'", "\\'"), email.replace("'", "\\'"), photo.replace("'", "\\'"), id.replace("'", "\\'")
+                                "if (typeof AuthEngine !== 'undefined') { AuthEngine.handleNativeGoogleUserLogin('%s', '%s', '%s', '%s', '%s'); }",
+                                name.replace("'", "\\'"), email.replace("'", "\\'"), photo.replace("'", "\\'"), id.replace("'", "\\'"), idToken.replace("'", "\\'").replace("\n", "").replace("\r", "")
                             );
                             getBridge().getWebView().evaluateJavascript(js, null);
                         }

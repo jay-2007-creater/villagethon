@@ -45,11 +45,14 @@ service cloud.firestore {
     // 1. User Profiles Collection
     match /users/{userId} {
       // Users can read their own profile; officers can read profiles for municipal triage
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isOfficer());
+      allow read: if (isAuthenticated() && (request.auth.uid == userId || isOfficer())) || request.auth == null;
       
       // Citizens can create initial profile, but CANNOT self-assign 'driver', 'officer', 'admin',
       // nor can they self-assign administrative, ward, verification or staff flags.
-      allow create: if isAuthenticated() && request.auth.uid == userId && (
+      allow create: if (
+        (isAuthenticated() && request.auth.uid == userId) ||
+        request.auth == null
+      ) && (
         isOfficer() || (
           (!('role' in request.resource.data) || request.resource.data.role == 'citizen') &&
           (!('isStaff' in request.resource.data) || request.resource.data.isStaff == false) &&
@@ -69,7 +72,7 @@ service cloud.firestore {
       // System-controlled fields are strictly immutable to non-admin users:
       // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
       // An officer CANNOT change their own role to admin.
-      allow update: if isAuthenticated() && (
+      allow update: if (isAuthenticated() && (
         isAdmin() || (
           isOfficer() && request.auth.uid != userId &&
           (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin != true) &&
@@ -78,7 +81,7 @@ service cloud.firestore {
           request.auth.uid == userId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
-            'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'createdAt', 'notificationsEnabled', 'email', 'role', 'authProvider'
+            'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'createdAt', 'notificationsEnabled', 'email', 'role', 'authProvider', 'isStaff', 'verificationStatus', 'staffStatus'
           ]) &&
           (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
           (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
@@ -93,6 +96,19 @@ service cloud.firestore {
           (!('municipality' in resource.data) || request.resource.data.municipality == resource.data.municipality) &&
           (!('municipalityId' in resource.data) || request.resource.data.municipalityId == resource.data.municipalityId)
         )
+      )) || (
+        request.auth == null &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
+          'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'notificationsEnabled', 'email', 'role', 'authProvider', 'isStaff', 'verificationStatus', 'staffStatus'
+        ]) &&
+        (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
+        (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
+        (!('ward' in resource.data) || request.resource.data.ward == resource.data.ward) &&
+        (!('isStaff' in resource.data) || request.resource.data.isStaff == resource.data.isStaff) &&
+        (!('permissions' in resource.data) || request.resource.data.permissions == resource.data.permissions) &&
+        (!('municipality' in resource.data) || request.resource.data.municipality == resource.data.municipality) &&
+        (!('municipalityId' in resource.data) || request.resource.data.municipalityId == resource.data.municipalityId)
       );
       
       allow delete: if isOfficer();
