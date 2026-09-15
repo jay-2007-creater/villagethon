@@ -474,6 +474,89 @@ const AuthEngine = {
     return { success: true };
   },
 
+  /**
+   * Directly onboard and pre-authorize a Municipal Officer or Driver
+   * Accessible to Administrators with 'staff_admin' permission.
+   */
+  async addAuthorizedStaff(staffData) {
+    if (!this.hasPermission('staff_admin')) {
+      if (typeof CityAssist !== 'undefined') {
+        CityAssist.showToast("⛔ Unauthorized: Only TDMC Chief Administrators can add municipal accounts.");
+      }
+      return { error: "Unauthorized" };
+    }
+
+    const cleanEmail = (staffData.email || '').trim().toLowerCase();
+    const cleanPhone = (staffData.phone || '').trim();
+    const role = staffData.role || 'officer';
+    const ward = staffData.ward || 'Ward 2 (Talegaon Dabhade)';
+    const wardId = staffData.wardId !== undefined ? staffData.wardId : 2;
+    const vehicleNumber = staffData.vehicleNumber || null;
+    const vehicleId = staffData.vehicleId || (vehicleNumber ? `GCV-${Math.floor(100 + Math.random() * 900)}` : null);
+
+    const newStaff = {
+      id: staffData.id || `MUNI-${role.toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+      userId: staffData.userId || '',
+      name: staffData.name || (role === 'driver' ? 'Municipal Driver' : 'Ward Civic Officer'),
+      email: cleanEmail,
+      phone: cleanPhone,
+      role: role,
+      roleLabel: role === 'driver' ? 'Municipal Fleet Driver' : (role === 'admin' ? 'TDMC Council Chief Administrator' : 'Ward Civic Officer'),
+      municipalityId: 'TAL-PMC-01',
+      wardId: wardId,
+      assignedWard: ward,
+      vehicleId: vehicleId,
+      vehicleNumber: vehicleNumber,
+      status: 'approved',
+      permissions: staffData.permissions || (role === 'driver' ? ['driver_telemetry'] : ['fleet_manage', 'publish_advisories', 'triage_grievances']),
+      office: 'Talegaon Municipal Headquarters',
+      avatar: staffData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(staffData.name || 'Staff')}&background=0F7943&color=fff&size=200&bold=true`,
+      approvedAt: new Date().toISOString(),
+      approvedBy: this.currentUser ? this.currentUser.name : 'Chief Administrator'
+    };
+
+    // 1. Update in-memory registry and local cache
+    const existingIndex = this.authorizedStaffRegistry.findIndex(s => 
+      (cleanEmail && s.email && s.email.toLowerCase() === cleanEmail) ||
+      (cleanPhone && s.phone && s.phone === cleanPhone)
+    );
+    if (existingIndex >= 0) {
+      this.authorizedStaffRegistry[existingIndex] = newStaff;
+    } else {
+      this.authorizedStaffRegistry.push(newStaff);
+    }
+    this.saveStaffRegistryToCache();
+
+    // 2. Sync to Cloud Firestore staff_registry
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        await db.collection('staff_registry').doc(newStaff.id).set(newStaff, { merge: true });
+      } catch (e) {
+        console.warn("Firestore staff_registry sync notice:", e);
+      }
+    }
+
+    // 3. Log admin audit action
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.logAdminAction) {
+      await FirebaseService.logAdminAction({
+        action: 'STAFF_MEMBER_ONBOARDED',
+        recordId: newStaff.id,
+        targetType: 'staff',
+        details: {
+          staffName: newStaff.name,
+          role: newStaff.role,
+          email: newStaff.email,
+          phone: newStaff.phone,
+          ward: newStaff.assignedWard,
+          vehicle: newStaff.vehicleNumber
+        }
+      });
+    }
+
+    return { success: true, staffRecord: newStaff };
+  },
+
   getStaffList() {
     return this.authorizedStaffRegistry || [];
   },

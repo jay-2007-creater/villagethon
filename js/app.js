@@ -3885,10 +3885,15 @@ const MunicipalityEngine = {
       </div>
 
       <!-- Approved Municipal Staff Directory -->
-      <div style="margin-top:10px; margin-bottom:8px;">
+      <div style="margin-top:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
         <span style="font-size:0.8rem; font-weight:800; color:#0F172A; text-transform:uppercase;">
           🛡️ Approved Staff & RBAC Permissions (${approvedStaff.length})
         </span>
+        ${isAdmin ? `
+          <button type="button" onclick="MunicipalityEngine.openAddStaffModal()" style="background:#0F7943; color:#FFF; border:none; padding:5px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            + Add Staff
+          </button>
+        ` : ''}
       </div>
 
       <div style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; margin-bottom:14px;">
@@ -3925,6 +3930,105 @@ const MunicipalityEngine = {
     `;
 
     CityAssist.openModal(modalHtml);
+  },
+
+  /**
+   * Open Direct Staff Onboarding Modal for Admins
+   */
+  openAddStaffModal() {
+    const modalHtml = `
+      <div class="modal-header-block" style="text-align:center; padding-bottom:4px;">
+        <div style="font-size:2.2rem; margin-bottom:4px;">👥</div>
+        <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Add Municipal Staff</h3>
+        <p style="color:#64748B; font-size:0.82rem;">Directly pre-authorize a Civic Officer or Fleet Driver</p>
+      </div>
+
+      <form onsubmit="MunicipalityEngine.saveNewStaff(event)" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Full Name *</label>
+          <input type="text" id="new-staff-name" required placeholder="e.g. Ramesh K. Patil" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Role Designation *</label>
+            <select id="new-staff-role" onchange="document.getElementById('new-staff-vehicle-box').style.display = this.value === 'driver' ? 'block' : 'none'" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:700;">
+              <option value="officer">🛡️ Civic Officer</option>
+              <option value="driver">🚚 Fleet Driver</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Assigned Ward *</label>
+            <select id="new-staff-ward" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:700;">
+              <option value="Ward 1 (Station Road & Market)">Ward 1 (Station Road)</option>
+              <option value="Ward 2 (Talegaon Dabhade)" selected>Ward 2 (Talegaon Dabhade)</option>
+              <option value="Ward 3 (Talegaon Gaothan)">Ward 3 (Gaothan)</option>
+              <option value="Ward 4 (Model Colony)">Ward 4 (Model Colony)</option>
+              <option value="Ward 5 (MIDC Industrial)">Ward 5 (MIDC)</option>
+              <option value="Ward 6 (Talegaon Hill)">Ward 6 (Talegaon Hill)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Official Email Address</label>
+          <input type="email" id="new-staff-email" placeholder="e.g. ramesh.officer@pmc.gov.in" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Mobile Number (for SMS / OTP Login) *</label>
+          <input type="tel" id="new-staff-phone" required placeholder="10-digit number e.g. 9822012345" maxlength="10" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div id="new-staff-vehicle-box" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:10px; padding:10px;">
+          <label style="font-size:0.75rem; font-weight:700; color:#166534; display:block; margin-bottom:4px;">Assigned Vehicle License Plate</label>
+          <input type="text" id="new-staff-vehicle" placeholder="e.g. MH-12-EA-4920" style="width:100%; padding:8px 10px; border:1px solid #86EFAC; border-radius:8px; font-size:0.82rem; font-weight:700;">
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button type="button" onclick="MunicipalityEngine.openStaffManagementModal()" style="flex:1; background:#F1F5F9; color:#475569; border:none; padding:12px; border-radius:12px; font-weight:700; cursor:pointer;">
+            Back
+          </button>
+          <button type="submit" class="primary-green-btn" style="flex:2; padding:12px; font-weight:800; font-size:0.88rem;">
+            ✓ Add Staff Member
+          </button>
+        </div>
+      </form>
+    `;
+    CityAssist.openModal(modalHtml);
+  },
+
+  async saveNewStaff(event) {
+    if (event) event.preventDefault();
+    const name = document.getElementById('new-staff-name')?.value?.trim();
+    const role = document.getElementById('new-staff-role')?.value;
+    const ward = document.getElementById('new-staff-ward')?.value;
+    const email = document.getElementById('new-staff-email')?.value?.trim();
+    const phone = document.getElementById('new-staff-phone')?.value?.trim();
+    const vehicleNumber = document.getElementById('new-staff-vehicle')?.value?.trim();
+
+    if (!name || (!email && !phone)) {
+      CityAssist.showToast("⚠️ Please provide full name and either phone or email.");
+      return;
+    }
+
+    if (typeof AuthEngine !== 'undefined' && AuthEngine.addAuthorizedStaff) {
+      const res = await AuthEngine.addAuthorizedStaff({
+        name: name,
+        role: role,
+        ward: ward,
+        email: email,
+        phone: phone ? (phone.startsWith('+91') ? phone : `+91 ${phone}`) : '',
+        vehicleNumber: vehicleNumber
+      });
+
+      if (res && res.success) {
+        CityAssist.showToast(`✓ Added ${role.toUpperCase()}: ${name} to Municipal Registry! 🛡️`);
+        this.openStaffManagementModal();
+      } else {
+        CityAssist.showToast(`⚠️ Could not add staff: ${res?.error || 'Check administrator rights'}`);
+      }
+    }
   },
 
   async approveStaffRequest(staffId, role) {
