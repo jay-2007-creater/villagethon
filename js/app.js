@@ -3809,6 +3809,23 @@ const MunicipalityEngine = {
       await FirebaseService.updateVehicleAssignment(vehicleId, assignmentData);
     }
 
+    // Automatically pre-authorize driver in Staff Registry so their login is instant
+    if (typeof AuthEngine !== 'undefined' && AuthEngine.addAuthorizedStaff) {
+      const formattedPhone = driverPhone ? (driverPhone.startsWith('+91') ? driverPhone : `+91 ${driverPhone}`) : '';
+      await AuthEngine.addAuthorizedStaff({
+        id: driverId,
+        name: driverName,
+        phone: formattedPhone,
+        email: assignmentData.driverEmail,
+        role: 'driver',
+        ward: assignmentData.wardName,
+        wardId: wardId,
+        vehicleId: vehicleId,
+        vehicleNumber: licensePlate,
+        permissions: ['driver_telemetry']
+      });
+    }
+
     CityAssist.closeModal();
     this.renderStats();
     this.renderMapMarkers();
@@ -4023,6 +4040,45 @@ const MunicipalityEngine = {
       });
 
       if (res && res.success) {
+        // If driver with vehicle number, also ensure fleet vehicle is updated/added
+        if (role === 'driver' && vehicleNumber && typeof CityData !== 'undefined' && CityData.municipality && CityData.municipality.fleetVehicles) {
+          const vid = res.staffRecord?.vehicleId || `GCV-${(CityData.municipality.fleetVehicles.length + 1).toString().padStart(3, '0')}`;
+          const existingVeh = CityData.municipality.fleetVehicles.find(v => v.licensePlate === vehicleNumber || v.vehicleId === vid);
+          if (existingVeh) {
+            existingVeh.driver = name;
+            existingVeh.phone = phone;
+          } else {
+            CityData.municipality.fleetVehicles.push({
+              vehicleId: vid,
+              licensePlate: vehicleNumber,
+              type: "Compactor 6-Ton",
+              wardId: 2,
+              wardName: ward,
+              routeId: "Route 2A",
+              routeName: `Route 2A (${ward})`,
+              schedule: "07:00 AM – 12:00 PM",
+              driver: name,
+              driverId: res.staffRecord?.id || `PMC-DRV-${Math.floor(100 + Math.random() * 900)}`,
+              phone: phone,
+              status: "On Standby • Depot",
+              isActive: false,
+              lat: 18.7320,
+              lng: 73.6790,
+              speed: "0 km/h",
+              fuel: "90%"
+            });
+          }
+          if (typeof FirebaseService !== 'undefined') {
+            FirebaseService.updateVehicleAssignment(vid, {
+              vehicleId: vid,
+              licensePlate: vehicleNumber,
+              wardName: ward,
+              driverName: name,
+              driverPhone: phone
+            }).catch(() => {});
+          }
+        }
+
         CityAssist.showToast(`✓ Added ${role.toUpperCase()}: ${name} to Municipal Registry! 🛡️`);
         this.openStaffManagementModal();
       } else {
