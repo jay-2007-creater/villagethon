@@ -1095,14 +1095,13 @@ const AuthEngine = {
   },
 
   /**
-   * One-click autofill of generated security code
+   * Optional manual entry for developer test OTP
    */
-  autofillGeneratedCode() {
-    if (!this.pendingGeneratedOTP) return;
+  fillDevCode(code = '123456') {
     for (let i = 1; i <= 6; i++) {
       const box = document.getElementById(`auth-otp-${i}`);
       if (box) {
-        box.value = this.pendingGeneratedOTP.charAt(i - 1);
+        box.value = code.charAt(i - 1);
         box.classList.add('filled');
       }
     }
@@ -1110,11 +1109,16 @@ const AuthEngine = {
     const primaryBtn = document.getElementById('auth-otp-primary-btn');
     if (primaryBtn) {
       primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+      primaryBtn.disabled = false;
       primaryBtn.focus();
     }
     if (typeof CityAssist !== 'undefined') {
-      CityAssist.showToast(`✓ Auto-filled Security Code: ${this.pendingGeneratedOTP}`);
+      CityAssist.showToast(`🧪 Test code ${code} entered.`);
     }
+  },
+
+  autofillGeneratedCode() {
+    this.fillDevCode('123456');
   },
 
   onOtpInput(index) {
@@ -1128,7 +1132,6 @@ const AuthEngine = {
 
   /**
    * Send Real Mobile OTP via Firebase Phone Auth with reCAPTCHA
-   * Gracefully falls back to instant verified security code when Firebase Spark daily SMS quota is reached
    */
   async requestMobileOTP() {
     const phoneInput = document.getElementById('auth-phone-input');
@@ -1157,54 +1160,27 @@ const AuthEngine = {
 
     this.setupOtpInputHandlers();
 
+    // Clear any previous digit inputs - boxes MUST start completely empty
+    for (let i = 1; i <= 6; i++) {
+      const box = document.getElementById(`auth-otp-${i}`);
+      if (box) {
+        box.value = '';
+        box.classList.remove('filled');
+      }
+    }
+    this.checkOtpCompletion();
+
     if (primaryBtn) {
       primaryBtn.disabled = true;
-      primaryBtn.textContent = 'Requesting OTP... ⏳';
+      primaryBtn.textContent = 'Requesting SMS OTP... ⏳';
     }
-
-    // Helper to activate instant verified security code
-    const activateInstantCode = (note = '') => {
-      const array = new Uint32Array(1);
-      window.crypto.getRandomValues(array);
-      this.pendingGeneratedOTP = (100000 + (array[0] % 900000)).toString();
-
-      if (verifyBox) verifyBox.style.display = 'block';
-      if (badge) {
-        badge.textContent = `Security Code: ${this.pendingGeneratedOTP}`;
-        badge.className = 'otp-badge-pill';
-      }
-      if (autofillBtn) autofillBtn.style.display = 'inline-block';
-      if (infoMsg) {
-        infoMsg.innerHTML = `Firebase Spark tier active. Tap <strong>Auto-fill Code</strong> or enter <strong>${this.pendingGeneratedOTP}</strong> below to sign in.`;
-      }
-
-      // Automatically pre-fill the 6 boxes cleanly
-      for (let i = 1; i <= 6; i++) {
-        const box = document.getElementById(`auth-otp-${i}`);
-        if (box) {
-          box.value = this.pendingGeneratedOTP.charAt(i - 1);
-          box.classList.add('filled');
-        }
-      }
-      this.checkOtpCompletion();
-
-      if (primaryBtn) {
-        primaryBtn.disabled = false;
-        primaryBtn.textContent = 'Verify OTP & Sign In ➜';
-      }
-
-      if (typeof CityAssist !== 'undefined') {
-        CityAssist.showToast(`🔑 Security Code: ${this.pendingGeneratedOTP} (Auto-filled)`);
-      }
-      this.startOtpTimer(45);
-    };
 
     // Attempt real Firebase Phone Auth SMS
     if (this.firebaseAuth && typeof firebase !== 'undefined' && firebase.auth) {
       try {
         const verifier = this.setupRecaptcha();
         if (!verifier) {
-          throw new Error("reCAPTCHA verifier initialization unavailable in current environment");
+          throw new Error("reCAPTCHA verifier initialization unavailable");
         }
 
         if (typeof CityAssist !== 'undefined') {
@@ -1219,20 +1195,13 @@ const AuthEngine = {
         if (badge) {
           badge.textContent = 'SMS Dispatched 📩';
           badge.className = 'otp-badge-pill';
+          badge.style.background = '#DCFCE7';
+          badge.style.color = '#15803D';
         }
         if (autofillBtn) autofillBtn.style.display = 'none';
         if (infoMsg) {
           infoMsg.innerHTML = `6-digit verification code sent via SMS to <strong>+91 ${phone}</strong>. Enter it below to sign in.`;
         }
-
-        for (let i = 1; i <= 6; i++) {
-          const box = document.getElementById(`auth-otp-${i}`);
-          if (box) {
-            box.value = '';
-            box.classList.remove('filled');
-          }
-        }
-        this.checkOtpCompletion();
 
         if (primaryBtn) {
           primaryBtn.disabled = false;
@@ -1246,18 +1215,93 @@ const AuthEngine = {
         setTimeout(() => { document.getElementById('auth-otp-1')?.focus(); }, 150);
         return;
       } catch (err) {
-        console.warn("Firebase Phone Auth carrier SMS unavailable, gracefully falling back to instant security code:", err);
+        console.error("Firebase Phone Auth carrier SMS error:", err);
         if (this.recaptchaVerifier) {
           try { this.recaptchaVerifier.clear(); } catch(e) {}
           this.recaptchaVerifier = null;
         }
 
-        // Seamless fallback for Firebase Spark quota (10 SMS/day limit), billing restrictions or WebView environment
-        activateInstantCode(err.code || err.message);
+        const isBillingErr = err.code === 'auth/billing-not-enabled' || 
+                             (err.message && err.message.includes('BILLING_NOT_ENABLED')) ||
+                             (err.message && err.message.includes('billing'));
+
+        if (verifyBox) verifyBox.style.display = 'block';
+
+        if (isBillingErr) {
+          if (badge) {
+            badge.textContent = '⚠️ Blaze Plan Required';
+            badge.className = 'otp-badge-pill';
+            badge.style.background = '#FEE2E2';
+            badge.style.color = '#991B1B';
+          }
+          if (infoMsg) {
+            infoMsg.innerHTML = `
+              <div style="background:#FFF1F2; border:1px solid #FECDD3; border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:0.8rem; color:#9F1239; line-height:1.4;">
+                <div style="font-weight:800; margin-bottom:4px;">⚠️ Real SMS Requires Firebase Blaze Plan</div>
+                Google Cloud prevents sending real telecom SMS on the free Spark plan.<br>
+                <span style="font-size:0.75rem; color:#64748B;">(Upgrading to Blaze includes 10,000 free SMS verifications/month).</span>
+                <div style="margin-top:6px; font-weight:600; color:#1E293B;">
+                  💡 <strong>To test without billing:</strong> Add your number in Firebase Console &rarr; Auth &rarr; Phone &rarr; <em>Phone numbers for testing</em>, or use Developer Test Code <strong>123456</strong> below.
+                </div>
+              </div>
+            `;
+          }
+
+          if (autofillBtn) {
+            autofillBtn.style.display = 'inline-block';
+            autofillBtn.innerHTML = '🧪 Use Test OTP (123456)';
+            autofillBtn.onclick = () => { this.fillDevCode('123456'); };
+          }
+
+          this.pendingGeneratedOTP = '123456';
+
+          if (primaryBtn) {
+            primaryBtn.disabled = false;
+            primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+          }
+
+          if (typeof CityAssist !== 'undefined') {
+            CityAssist.showToast("⚠️ Firebase project requires Blaze plan to send carrier SMS.");
+          }
+        } else {
+          // Other error (e.g. invalid phone number, quota, recaptcha failure)
+          if (badge) {
+            badge.textContent = 'SMS Request Failed ❌';
+            badge.className = 'otp-badge-pill';
+            badge.style.background = '#FEE2E2';
+            badge.style.color = '#991B1B';
+          }
+          if (infoMsg) {
+            infoMsg.innerHTML = `<span style="color:#DC2626; font-size:0.82rem;">${err.message || 'Unable to dispatch SMS. Please verify your phone number or sign in with Email.'}</span>`;
+          }
+          if (autofillBtn) autofillBtn.style.display = 'none';
+
+          if (primaryBtn) {
+            primaryBtn.disabled = false;
+            primaryBtn.textContent = 'Retry Sending OTP ➜';
+          }
+
+          if (typeof CityAssist !== 'undefined') {
+            CityAssist.showToast(`❌ ${err.message || 'Failed to dispatch SMS'}`);
+          }
+        }
         return;
       }
     } else {
-      activateInstantCode('offline');
+      // Offline fallback
+      if (verifyBox) verifyBox.style.display = 'block';
+      if (badge) badge.textContent = 'Offline Mode ⚡';
+      if (infoMsg) infoMsg.textContent = 'Offline: Enter test code 123456 to test.';
+      if (autofillBtn) {
+        autofillBtn.style.display = 'inline-block';
+        autofillBtn.innerHTML = '🧪 Fill 123456';
+        autofillBtn.onclick = () => { this.fillDevCode('123456'); };
+      }
+      this.pendingGeneratedOTP = '123456';
+      if (primaryBtn) {
+        primaryBtn.disabled = false;
+        primaryBtn.textContent = 'Verify OTP & Sign In ➜';
+      }
     }
   },
 
