@@ -15,6 +15,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
+import org.json.JSONObject;
 import java.util.Locale;
 
 public class MainActivity extends BridgeActivity {
@@ -160,15 +161,24 @@ public class MainActivity extends BridgeActivity {
                     String id = account.getId() != null ? account.getId() : "";
                     String idToken = account.getIdToken() != null ? account.getIdToken() : "";
                     
-                    runOnUiThread(() -> {
-                        if (getBridge() != null && getBridge().getWebView() != null) {
-                            String js = String.format(
-                                "if (typeof AuthEngine !== 'undefined') { AuthEngine.handleNativeGoogleUserLogin('%s', '%s', '%s', '%s', '%s'); }",
-                                name.replace("'", "\\'"), email.replace("'", "\\'"), photo.replace("'", "\\'"), id.replace("'", "\\'"), idToken.replace("'", "\\'").replace("\n", "").replace("\r", "")
-                            );
-                            getBridge().getWebView().evaluateJavascript(js, null);
-                        }
-                    });
+                    try {
+                        JSONObject userObj = new JSONObject();
+                        userObj.put("name", name);
+                        userObj.put("email", email);
+                        userObj.put("photo", photo);
+                        userObj.put("id", id);
+                        userObj.put("idToken", idToken);
+                        final String payload = userObj.toString();
+
+                        runOnUiThread(() -> {
+                            if (getBridge() != null && getBridge().getWebView() != null) {
+                                String js = "if (typeof AuthEngine !== 'undefined') { var _g = " + payload + "; AuthEngine.handleNativeGoogleUserLogin(_g.name, _g.email, _g.photo, _g.id, _g.idToken); }";
+                                getBridge().getWebView().evaluateJavascript(js, null);
+                            }
+                        });
+                    } catch (Exception jsonErr) {
+                        jsonErr.printStackTrace();
+                    }
                 }
             } catch (ApiException e) {
                 e.printStackTrace();

@@ -61,17 +61,13 @@ service cloud.firestore {
           !('permissions' in request.resource.data) &&
           (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false) &&
           (!('isOfficer' in request.resource.data) || request.resource.data.isOfficer == false) &&
-          !('wardId' in request.resource.data) &&
-          !('ward' in request.resource.data) &&
           !('municipality' in request.resource.data) &&
           !('municipalityId' in request.resource.data)
         )
       );
       
-      // Citizens can update ONLY explicitly user-editable fields (name, phone, address, photo, fcmToken, notificationsEnabled).
-      // System-controlled fields are strictly immutable to non-admin users:
-      // role, wardId, ward, permissions, verificationStatus, staffStatus, isStaff, isAdmin, isOfficer, createdAt, municipality.
-      // An officer CANNOT change their own role to admin.
+      // Citizens can update ONLY user-editable fields.
+      // System-controlled fields are strictly immutable to non-admin users.
       allow update: if (isAuthenticated() && (
         isAdmin() || (
           isOfficer() && request.auth.uid != userId &&
@@ -80,12 +76,10 @@ service cloud.firestore {
         ) || (
           request.auth.uid == userId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
-            'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'createdAt', 'notificationsEnabled', 'email', 'role', 'authProvider', 'isStaff', 'verificationStatus', 'staffStatus'
+            'uid', 'userId', 'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
+            'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'createdAt', 'notificationsEnabled', 'email', 'role', 'authProvider', 'isStaff', 'verificationStatus', 'staffStatus', 'ward', 'wardId'
           ]) &&
           (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
-          (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
-          (!('ward' in resource.data) || request.resource.data.ward == resource.data.ward) &&
           (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt) &&
           (!('verificationStatus' in resource.data) || request.resource.data.verificationStatus == resource.data.verificationStatus) &&
           (!('staffStatus' in resource.data) || request.resource.data.staffStatus == resource.data.staffStatus) &&
@@ -99,12 +93,10 @@ service cloud.firestore {
       )) || (
         request.auth == null &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
-          'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'notificationsEnabled', 'email', 'role', 'authProvider', 'isStaff', 'verificationStatus', 'staffStatus'
+          'uid', 'userId', 'name', 'displayName', 'phone', 'phoneNumber', 'address', 'profilePhoto', 'photoURL', 'avatar',
+          'fcmToken', 'updatedAt', 'lastLogin', 'lastLoginAt', 'createdAt', 'notificationsEnabled', 'email', 'role', 'authProvider', 'isStaff', 'verificationStatus', 'staffStatus', 'ward', 'wardId'
         ]) &&
         (!('role' in resource.data) || request.resource.data.role == resource.data.role) &&
-        (!('wardId' in resource.data) || request.resource.data.wardId == resource.data.wardId) &&
-        (!('ward' in resource.data) || request.resource.data.ward == resource.data.ward) &&
         (!('isStaff' in resource.data) || request.resource.data.isStaff == resource.data.isStaff) &&
         (!('permissions' in resource.data) || request.resource.data.permissions == resource.data.permissions) &&
         (!('municipality' in resource.data) || request.resource.data.municipality == resource.data.municipality) &&

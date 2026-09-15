@@ -468,17 +468,23 @@ const AuthEngine = {
   async syncProfileToFirestore() {
     if (!this.currentUser) return;
     try {
-      const currentAuthUser = (this.firebaseAuth && this.firebaseAuth.currentUser) ? this.firebaseAuth.currentUser : null;
-      const uid = (currentAuthUser && currentAuthUser.uid) ? currentAuthUser.uid : (this.currentUser.id || this.currentUser.uid || `USR-${Math.floor(1000 + Math.random() * 9000)}`);
+      const currentAuthUser = (this.firebaseAuth && this.firebaseAuth.currentUser && !this.firebaseAuth.currentUser.isAnonymous) ? this.firebaseAuth.currentUser : null;
+      const uid = (this.currentUser.uid || this.currentUser.id || (currentAuthUser && currentAuthUser.uid) || (this.firebaseAuth && this.firebaseAuth.currentUser && this.firebaseAuth.currentUser.uid) || `USR-${Math.floor(1000 + Math.random() * 9000)}`);
       if (!uid) return;
+      this.currentUser.uid = uid;
+      this.currentUser.id = uid;
 
       const nowIso = new Date().toISOString();
       const profileData = {
+        uid: uid,
+        userId: uid,
         name: this.currentUser.name || 'Citizen',
         displayName: this.currentUser.name || 'Citizen',
         email: this.currentUser.email || '',
         phone: this.currentUser.phone || '',
         address: this.currentUser.address || 'Talegaon Dabhade, Pune',
+        ward: this.currentUser.ward || 'Ward 2 (Talegaon Dabhade)',
+        wardId: this.currentUser.wardId !== undefined ? this.currentUser.wardId : 2,
         role: this.currentUser.role || 'citizen',
         isStaff: false,
         verificationStatus: 'unverified',
@@ -512,11 +518,15 @@ const AuthEngine = {
       try {
         const restUrl = `https://firestore.googleapis.com/v1/projects/cityassist-7bad3/databases/(default)/documents/users/${encodeURIComponent(uid)}?key=AIzaSyAiBAukd6JABiSy1n73ngbHCMF8CxKcrd0`;
         const restFields = {
+          uid: { stringValue: uid },
+          userId: { stringValue: uid },
           name: { stringValue: profileData.name },
           displayName: { stringValue: profileData.displayName },
           email: { stringValue: profileData.email },
           phone: { stringValue: profileData.phone },
           address: { stringValue: profileData.address },
+          ward: { stringValue: profileData.ward },
+          wardId: { integerValue: String(profileData.wardId) },
           role: { stringValue: profileData.role },
           isStaff: { booleanValue: profileData.isStaff },
           verificationStatus: { stringValue: profileData.verificationStatus },
@@ -598,6 +608,9 @@ const AuthEngine = {
     }
     this.syncUserWithApp();
     this.updateRoleUI();
+    if (this.currentUser) {
+      this.syncProfileToFirestore();
+    }
   },
 
   saveSession() {

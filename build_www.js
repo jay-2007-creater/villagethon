@@ -21,8 +21,10 @@ function copyRecursive(src, dest) {
   }
 }
 
-// Copy essential web assets
-['index.html', 'manifest.json', 'sw.js', 'favicon.png', 'assets', 'css', 'js', 'audio'].forEach(item => {
+const itemsToCopy = ['index.html', 'manifest.json', 'sw.js', 'favicon.png', 'assets', 'css', 'js', 'audio'];
+
+// Copy essential web assets to www
+itemsToCopy.forEach(item => {
   const src = path.join(__dirname, item);
   const dest = path.join(wwwDir, item);
   if (fs.existsSync(src)) {
@@ -31,3 +33,16 @@ function copyRecursive(src, dest) {
 });
 
 console.log('✓ www directory successfully prepared for Android APK packaging!');
+
+// CRITICAL: Also copy directly into android/app/src/main/assets/public so Gradle assembleDebug bundles newest assets!
+const androidPublicDir = path.join(__dirname, 'android', 'app', 'src', 'main', 'assets', 'public');
+if (fs.existsSync(androidPublicDir)) {
+  itemsToCopy.forEach(item => {
+    const src = path.join(__dirname, item);
+    const dest = path.join(androidPublicDir, item);
+    if (fs.existsSync(src)) {
+      copyRecursive(src, dest);
+    }
+  });
+  console.log('✓ android/app/src/main/assets/public successfully synchronized with root web assets!');
+}
