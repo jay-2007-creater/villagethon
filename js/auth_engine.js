@@ -28,6 +28,22 @@ const AuthEngine = {
   // In production, these records are synchronized with Cloud Firestore collection `staff_registry`
   authorizedStaffRegistry: [
     {
+      id: "oVfZb1fgBGSyPRXHWymJOQhr7Yw1",
+      userId: "oVfZb1fgBGSyPRXHWymJOQhr7Yw1",
+      name: "siddhant ramteke",
+      email: "siddhantramteke06@gmail.com",
+      phone: "",
+      role: "admin",
+      roleLabel: "TDMC Council Chief Administrator",
+      municipalityId: "TAL-PMC-01",
+      wardId: "all",
+      assignedWard: "All Wards (Municipal HQ)",
+      status: "approved",
+      permissions: ['staff_admin', 'fleet_manage', 'publish_advisories', 'triage_grievances', 'driver_telemetry'],
+      office: "Talegaon Municipal Headquarters",
+      avatar: "https://ui-avatars.com/api/?name=siddhant%20ramteke&background=0F7943&color=fff&size=200&bold=true"
+    },
+    {
       id: "MUNI-ADM-001",
       userId: "admin_uid_001",
       name: "Prakash Deshmukh (Admin)",
