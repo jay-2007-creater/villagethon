@@ -257,6 +257,22 @@ const AuthEngine = {
             if (evalRes) return evalRes;
           }
         }
+
+        if (cleanDigits && cleanDigits.length >= 10) {
+          const last10 = cleanDigits.slice(-10);
+          const phoneQueries = [
+            db.collection('staff_registry').where('phone', '==', `+91 ${last10}`).get(),
+            db.collection('staff_registry').where('phone', '==', `+91${last10}`).get(),
+            db.collection('staff_registry').where('phone', '==', last10).get()
+          ];
+          const results = await Promise.all(phoneQueries);
+          for (const snap of results) {
+            if (!snap.empty) {
+              const evalRes = evaluateStaffRecord(snap.docs[0].data());
+              if (evalRes) return evalRes;
+            }
+          }
+        }
       } catch (e) {
         console.warn("Firestore staff_registry lookup notice:", e);
       }

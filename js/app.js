@@ -3988,13 +3988,14 @@ const MunicipalityEngine = {
         </div>
 
         <div>
-          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Official Email Address</label>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Official Email Address (for Email Sign-in)</label>
           <input type="email" id="new-staff-email" placeholder="e.g. ramesh.officer@pmc.gov.in" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
         </div>
 
         <div>
-          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Mobile Number (for SMS / OTP Login) *</label>
-          <input type="tel" id="new-staff-phone" required placeholder="10-digit number e.g. 9822012345" maxlength="10" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Mobile Number (for Mobile OTP Sign-in)</label>
+          <input type="tel" id="new-staff-phone" placeholder="10-digit number e.g. 9822012345" maxlength="10" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          <span style="font-size:0.7rem; color:#64748B; margin-top:2px; display:block;">ℹ️ Provide either Email or Mobile Number (or both).</span>
         </div>
 
         <div id="new-staff-vehicle-box" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:10px; padding:10px;">
