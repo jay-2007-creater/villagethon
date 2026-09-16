@@ -226,6 +226,8 @@ const CityAssist = {
       setTimeout(() => LeafletMapEngine.initReportMap(), 150);
     } else if (screenId === 'municipality' && typeof MunicipalityEngine !== 'undefined') {
       setTimeout(() => MunicipalityEngine.init(), 100);
+    } else if (screenId === 'services' && typeof ServicesEngine !== 'undefined') {
+      ServicesEngine.renderProfessionals();
     }
   },
 
@@ -5090,17 +5092,85 @@ const ServicesEngine = {
   currentCategory: 'all',
 
   init() {
+    this.loadSquadsFromStorage();
     this.renderProfessionals();
+  },
+
+  loadSquadsFromStorage() {
+    try {
+      const saved = localStorage.getItem('cityassist_custom_squads');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsed.forEach(item => {
+            const idx = CityData.professionals.findIndex(p => p.id === item.id);
+            if (idx >= 0) {
+              CityData.professionals[idx] = Object.assign({}, CityData.professionals[idx], item);
+            } else {
+              CityData.professionals.unshift(item);
+            }
+          });
+        }
+      }
+    } catch(e) {}
+
+    // Async sync from Firestore if online
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        db.collection('municipal_squads').get().then(snapshot => {
+          if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              const existingIdx = CityData.professionals.findIndex(p => p.id === data.id);
+              if (existingIdx >= 0) {
+                CityData.professionals[existingIdx] = Object.assign({}, CityData.professionals[existingIdx], data);
+              } else {
+                CityData.professionals.unshift(data);
+              }
+            });
+            this.renderProfessionals();
+          }
+        }).catch(err => console.warn("Firestore municipal_squads sync notice:", err));
+      } catch(e) {}
+    }
+  },
+
+  saveSquadsToStorage() {
+    try {
+      localStorage.setItem('cityassist_custom_squads', JSON.stringify(CityData.professionals));
+    } catch(e) {}
   },
 
   renderProfessionals(filtered = null) {
     const container = document.getElementById('professionals-list-feed');
     if (!container) return;
 
+    const isAdmin = typeof AuthEngine !== 'undefined' && 
+                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+
     const list = filtered || this.getFilteredPros();
 
+    let adminBannerHtml = '';
+    if (isAdmin) {
+      adminBannerHtml = `
+        <div style="background:rgba(255,255,255,0.12); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.25); border-radius:14px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.15rem;">🛡️</span>
+            <div>
+              <div style="font-size:0.8rem; font-weight:800; color:#FEF3C7; line-height:1.2;">Admin Directory Control</div>
+              <div style="font-size:0.68rem; color:#E2E8F0; opacity:0.9;">Edit squad contact helplines or add new units</div>
+            </div>
+          </div>
+          <button type="button" onclick="ServicesEngine.openAddSquadModal()" style="background:#22C55E; color:#0F172A; border:none; padding:6px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(34,197,94,0.3);">
+            <span>+ Add Squad</span>
+          </button>
+        </div>
+      `;
+    }
+
     if (list.length === 0) {
-      container.innerHTML = `
+      container.innerHTML = adminBannerHtml + `
         <div class="muni-squad-white-card" style="text-align:center; padding:28px 12px; color:#64748B;">
           <div style="font-size:2.2rem; margin-bottom:6px;">🏛️</div>
           <p style="font-size:0.92rem; font-weight:800; color:#1E293B; margin:0;">No municipal squad found</p>
@@ -5110,8 +5180,8 @@ const ServicesEngine = {
       return;
     }
 
-    container.innerHTML = list.map(pro => `
-      <div class="muni-squad-white-card" onclick="ServicesEngine.callProfessional('${pro.id}')" style="margin-bottom:12px; cursor:pointer;">
+    container.innerHTML = adminBannerHtml + list.map(pro => `
+      <div class="muni-squad-white-card" onclick="ServicesEngine.callProfessional('${pro.id}')" style="margin-bottom:12px; cursor:pointer; position:relative;">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
           
           <!-- Left: Vehicle / Squad Icon & Details -->
@@ -5134,7 +5204,7 @@ const ServicesEngine = {
             </div>
           </div>
 
-          <!-- Right: Rating & Call Button -->
+          <!-- Right: Rating & Actions (Admin Edit & Citizen Call) -->
           <div style="display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:3px; font-size:0.85rem; font-weight:800; color:#D97706;">
               <span>★</span>
@@ -5142,9 +5212,17 @@ const ServicesEngine = {
             </div>
             <div style="font-size:0.7rem; color:#64748B; margin-top:1px;">(${pro.reviews} resolved)</div>
             
-            <a href="tel:${pro.phone}" onclick="event.stopPropagation(); CityAssist.showToast('Calling ${pro.name}... 📞');" style="width:36px; height:36px; border-radius:50%; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; margin-top:6px; text-decoration:none; box-shadow:0 2px 6px rgba(21,128,61,0.15);" title="Call Helpline">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" width="17" height="17"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            </a>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:6px;">
+              ${isAdmin ? `
+                <button type="button" onclick="event.stopPropagation(); ServicesEngine.openEditSquadModal('${pro.id}')" style="background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:8px; padding:5px 8px; font-size:0.72rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 1px 3px rgba(0,0,0,0.05);" title="Edit Squad & Helpline Info">
+                  ✏️ Edit
+                </button>
+              ` : ''}
+
+              <a href="tel:${pro.phone}" onclick="event.stopPropagation(); CityAssist.showToast('Calling ${pro.name}... 📞');" style="width:36px; height:36px; border-radius:50%; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; text-decoration:none; box-shadow:0 2px 6px rgba(21,128,61,0.15);" title="Call Helpline: ${pro.phone}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" width="17" height="17"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              </a>
+            </div>
           </div>
 
         </div>
@@ -5153,7 +5231,7 @@ const ServicesEngine = {
         <div style="background:#F0FDF4; border-radius:10px; padding:7px 11px; margin-top:10px; display:flex; align-items:center; justify-content:space-between; font-size:0.73rem; font-weight:700; color:#15803D;">
           <div style="display:flex; align-items:center; gap:5px;">
             <span>🚚</span>
-            <span>On duty • Serving the community</span>
+            <span>${pro.status || 'On duty • Serving the community'}</span>
           </div>
           <span style="color:#047857; font-weight:800; cursor:pointer;" onclick="event.stopPropagation(); ServicesEngine.callProfessional('${pro.id}')">
             View Details &gt;
@@ -5161,6 +5239,275 @@ const ServicesEngine = {
         </div>
       </div>
     `).join('');
+  },
+
+  openEditSquadModal(squadId) {
+    const isAdmin = typeof AuthEngine !== 'undefined' && 
+                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    if (!isAdmin) {
+      CityAssist.showToast("⛔ Unauthorized: Only Municipality Administrators can edit squad contacts.");
+      return;
+    }
+
+    const pro = CityData.professionals.find(p => p.id === squadId);
+    if (!pro) {
+      CityAssist.showToast("⚠️ Squad record not found.");
+      return;
+    }
+
+    const modalHtml = `
+      <div class="modal-header-block" style="text-align:center; padding-bottom:6px;">
+        <div style="font-size:2.2rem; margin-bottom:4px;">✏️</div>
+        <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Edit Municipal Squad</h3>
+        <p style="color:#64748B; font-size:0.8rem;">Update helpline contact numbers and in-charge officer details for citizens</p>
+      </div>
+
+      <form onsubmit="ServicesEngine.saveSquad(event, '${pro.id}')" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Squad / Division Name *</label>
+          <input type="text" id="edit-squad-name" value="${pro.name || ''}" required style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Category *</label>
+            <select id="edit-squad-category" onchange="ServicesEngine.syncCategoryLabel(this.value)" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:700;">
+              <option value="waste" ${pro.category === 'waste' ? 'selected' : ''}>Waste Management</option>
+              <option value="water" ${pro.category === 'water' ? 'selected' : ''}>Water Supply</option>
+              <option value="roads" ${pro.category === 'roads' ? 'selected' : ''}>Roads & Pavements</option>
+              <option value="streetlights" ${pro.category === 'streetlights' ? 'selected' : ''}>Streetlights</option>
+              <option value="drainage" ${pro.category === 'drainage' ? 'selected' : ''}>Drainage & Sewerage</option>
+              <option value="health" ${pro.category === 'health' ? 'selected' : ''}>Health & Fogging</option>
+              <option value="infra" ${pro.category === 'infra' ? 'selected' : ''}>Infrastructure</option>
+              <option value="trees" ${pro.category === 'trees' ? 'selected' : ''}>Horticulture & Trees</option>
+              <option value="other" ${pro.category === 'other' ? 'selected' : ''}>General Civic</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Category Tag</label>
+            <input type="text" id="edit-squad-catlabel" value="${pro.categoryLabel || ''}" placeholder="e.g. Sanitation" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">📞 Official Helpline / Phone Number *</label>
+          <input type="tel" id="edit-squad-phone" value="${pro.phone || ''}" required placeholder="e.g. 1800-233-0404 or 9822012345" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.88rem; font-weight:800; color:#0F7943;">
+          <span style="font-size:0.7rem; color:#64748B; margin-top:2px; display:block;">Citizens calling this squad will dial this exact number.</span>
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">In-Charge Officer / Department Head</label>
+          <input type="text" id="edit-squad-officer" value="${pro.officer || ''}" placeholder="e.g. Er. Ramesh Patil (Zonal Inspector)" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Operating Ward / Zone</label>
+          <input type="text" id="edit-squad-distance" value="${pro.distance || ''}" placeholder="e.g. Ward 2 & Sector 4 Division" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Live Duty Status</label>
+          <input type="text" id="edit-squad-status" value="${pro.status || ''}" placeholder="e.g. 🟢 4 Collection Trucks Active" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Services Description</label>
+          <textarea id="edit-squad-desc" rows="2" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.82rem; font-weight:500; resize:none;">${pro.description || ''}</textarea>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button type="button" onclick="CityAssist.closeModal()" style="flex:1; background:#F1F5F9; color:#475569; border:none; padding:12px; border-radius:12px; font-weight:700; cursor:pointer;">
+            Cancel
+          </button>
+          <button type="submit" class="primary-green-btn" style="flex:2; padding:12px; font-weight:800; font-size:0.88rem;">
+            💾 Save Changes
+          </button>
+        </div>
+      </form>
+    `;
+
+    CityAssist.openModal(modalHtml);
+  },
+
+  openAddSquadModal() {
+    const isAdmin = typeof AuthEngine !== 'undefined' && 
+                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    if (!isAdmin) {
+      CityAssist.showToast("⛔ Unauthorized: Only Municipality Administrators can add squads.");
+      return;
+    }
+
+    const modalHtml = `
+      <div class="modal-header-block" style="text-align:center; padding-bottom:6px;">
+        <div style="font-size:2.2rem; margin-bottom:4px;">➕</div>
+        <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Add Municipal Squad</h3>
+        <p style="color:#64748B; font-size:0.8rem;">Register a new response unit or verified civic service provider</p>
+      </div>
+
+      <form onsubmit="ServicesEngine.saveSquad(event, null)" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Squad / Division Name *</label>
+          <input type="text" id="edit-squad-name" required placeholder="e.g. Talegaon Drainage & Sewage Response" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Category *</label>
+            <select id="edit-squad-category" onchange="ServicesEngine.syncCategoryLabel(this.value)" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:700;">
+              <option value="waste">Waste Management</option>
+              <option value="water">Water Supply</option>
+              <option value="roads">Roads & Pavements</option>
+              <option value="streetlights">Streetlights</option>
+              <option value="drainage" selected>Drainage & Sewerage</option>
+              <option value="health">Health & Fogging</option>
+              <option value="infra">Infrastructure</option>
+              <option value="trees">Horticulture & Trees</option>
+              <option value="other">General Civic</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Category Tag</label>
+            <input type="text" id="edit-squad-catlabel" value="Drainage" placeholder="e.g. Drainage" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">📞 Official Helpline / Phone Number *</label>
+          <input type="tel" id="edit-squad-phone" required placeholder="e.g. 02114-222129 or 9822012345" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.88rem; font-weight:800; color:#0F7943;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">In-Charge Officer / Department Head</label>
+          <input type="text" id="edit-squad-officer" placeholder="e.g. Er. Aniket Joshi (Superintending Engineer)" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Operating Ward / Zone</label>
+          <input type="text" id="edit-squad-distance" value="Talegaon Municipal Jurisdiction" placeholder="e.g. Ward 1, 2, 3 All Sectors" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Live Duty Status</label>
+          <input type="text" id="edit-squad-status" value="🟢 Rapid Jetting Unit Active" placeholder="e.g. 🟢 Ready on Call" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+        </div>
+
+        <div>
+          <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Services Description</label>
+          <textarea id="edit-squad-desc" rows="2" placeholder="Describe the squad's scope of service..." style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.82rem; font-weight:500; resize:none;"></textarea>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button type="button" onclick="CityAssist.closeModal()" style="flex:1; background:#F1F5F9; color:#475569; border:none; padding:12px; border-radius:12px; font-weight:700; cursor:pointer;">
+            Cancel
+          </button>
+          <button type="submit" class="primary-green-btn" style="flex:2; padding:12px; font-weight:800; font-size:0.88rem;">
+            ✓ Add Squad
+          </button>
+        </div>
+      </form>
+    `;
+
+    CityAssist.openModal(modalHtml);
+  },
+
+  async saveSquad(event, proId) {
+    if (event) event.preventDefault();
+    const isAdmin = typeof AuthEngine !== 'undefined' && 
+                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    if (!isAdmin) {
+      CityAssist.showToast("⛔ Unauthorized action.");
+      return;
+    }
+
+    const name = document.getElementById('edit-squad-name')?.value?.trim();
+    const category = document.getElementById('edit-squad-category')?.value || 'other';
+    const categoryLabel = document.getElementById('edit-squad-catlabel')?.value?.trim() || this.getDefaultCatLabel(category);
+    const phone = document.getElementById('edit-squad-phone')?.value?.trim();
+    const officer = document.getElementById('edit-squad-officer')?.value?.trim() || 'Municipal Duty Officer';
+    const distance = document.getElementById('edit-squad-distance')?.value?.trim() || 'Talegaon Dabhade Jurisdiction';
+    const status = document.getElementById('edit-squad-status')?.value?.trim() || '🟢 On Duty • Serving Citizenry';
+    const desc = document.getElementById('edit-squad-desc')?.value?.trim() || 'Rapid municipal response unit.';
+
+    if (!name || !phone) {
+      CityAssist.showToast("⚠️ Name and Contact Phone are required.");
+      return;
+    }
+
+    const isEditing = !!proId;
+    const squadId = isEditing ? proId : `GOV-SQUAD-${Date.now().toString().slice(-4)}`;
+
+    const iconMap = {
+      waste: "🗑️", water: "💧", roads: "🛣️", streetlights: "💡",
+      drainage: "🚰", health: "🏥", infra: "🚏", trees: "🌳", other: "📋"
+    };
+
+    const targetSquad = {
+      id: squadId,
+      name: name,
+      category: category,
+      categoryLabel: categoryLabel,
+      icon: iconMap[category] || "🛡️",
+      rating: isEditing ? (CityData.professionals.find(p => p.id === proId)?.rating || 4.8) : 4.9,
+      reviews: isEditing ? (CityData.professionals.find(p => p.id === proId)?.reviews || 500) : 1,
+      distance: distance,
+      status: status,
+      phone: phone,
+      experience: "Talegaon Municipal Council",
+      rate: "Official Municipal Wing",
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}&backgroundColor=bbf7d0`,
+      verified: true,
+      officer: officer,
+      description: desc
+    };
+
+    if (isEditing) {
+      const idx = CityData.professionals.findIndex(p => p.id === proId);
+      if (idx >= 0) {
+        CityData.professionals[idx] = Object.assign({}, CityData.professionals[idx], targetSquad);
+      } else {
+        CityData.professionals.push(targetSquad);
+      }
+    } else {
+      CityData.professionals.unshift(targetSquad);
+    }
+
+    this.saveSquadsToStorage();
+
+    // Sync to Cloud Firestore
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        const db = firebase.firestore();
+        await db.collection('municipal_squads').doc(squadId).set(targetSquad, { merge: true });
+      } catch (e) {
+        console.warn("Firestore municipal_squads sync:", e);
+      }
+    }
+
+    CityAssist.closeModal();
+    this.renderProfessionals();
+    CityAssist.showToast(`✓ "${name}" contact details updated successfully! 📞`);
+  },
+
+  syncCategoryLabel(val) {
+    const catInput = document.getElementById('edit-squad-catlabel');
+    if (catInput) {
+      catInput.value = this.getDefaultCatLabel(val);
+    }
+  },
+
+  getDefaultCatLabel(cat) {
+    const labels = {
+      waste: "Waste Management",
+      water: "Water Supply",
+      roads: "Roads & Pavements",
+      streetlights: "Streetlights",
+      drainage: "Drainage & Sewerage",
+      health: "Health & Fogging",
+      infra: "Infrastructure",
+      trees: "Horticulture",
+      other: "General Civic"
+    };
+    return labels[cat] || "Civic Division";
   },
 
   getFilteredPros() {
@@ -5451,6 +5798,9 @@ const ServicesEngine = {
     const pro = CityData.professionals.find(p => p.id === proId);
     if (!pro) return;
 
+    const isAdmin = typeof AuthEngine !== 'undefined' && 
+                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+
     CityAssist.openModal(`
       <div class="modal-header-block" style="text-align:center;">
         <div style="width:70px; height:70px; margin:0 auto 10px; position:relative;">
@@ -5489,6 +5839,14 @@ const ServicesEngine = {
       <div style="font-size:0.82rem; color:#475569; background:#F0FDF4; border:1px solid #BBF7D0; padding:10px 12px; border-radius:10px; margin-bottom:16px;">
         <strong>Department Mandate:</strong> ${pro.description}
       </div>
+
+      ${isAdmin ? `
+        <div style="margin-bottom:12px;">
+          <button type="button" onclick="CityAssist.closeModal(); ServicesEngine.openEditSquadModal('${pro.id}');" style="width:100%; background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:10px; padding:10px; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            ✏️ Edit Squad & Contact Details (Admin Only)
+          </button>
+        </div>
+      ` : ''}
 
       <div style="display:flex; gap:10px;">
         <button type="button" onclick="CityAssist.closeModal(); ServicesEngine.openServiceRequest('${pro.category}')" class="primary-green-btn" style="flex:1; background:#F0FDF4; color:#15803D; border:1.5px solid #BBF7D0; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">
