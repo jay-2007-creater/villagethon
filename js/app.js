@@ -227,6 +227,7 @@ const CityAssist = {
     } else if (screenId === 'municipality' && typeof MunicipalityEngine !== 'undefined') {
       setTimeout(() => MunicipalityEngine.init(), 100);
     } else if (screenId === 'services' && typeof ServicesEngine !== 'undefined') {
+      ServicesEngine.updateMunicipalityBannerUI();
       ServicesEngine.renderProfessionals();
     }
   },
@@ -5090,10 +5091,198 @@ const CommunityEngine = {
  */
 const ServicesEngine = {
   currentCategory: 'all',
+  cachedMuniId: null,
 
   init() {
+    this.initActiveMunicipality();
     this.loadSquadsFromStorage();
+    this.updateMunicipalityBannerUI();
     this.renderProfessionals();
+  },
+
+  initActiveMunicipality() {
+    try {
+      const saved = localStorage.getItem('cityassist_active_municipality');
+      if (saved && (CityData.municipalities || []).some(m => m.id === saved)) {
+        this.cachedMuniId = saved;
+        CityData.activeMunicipalityId = saved;
+        return;
+      }
+    } catch(e) {}
+
+    // If staff user is logged in, use their assigned municipality
+    if (typeof AuthEngine !== 'undefined' && AuthEngine.currentUser && AuthEngine.currentUser.municipalityId) {
+      const uMuni = AuthEngine.currentUser.municipalityId;
+      const match = (CityData.municipalities || []).find(m => m.id === uMuni || uMuni.includes(m.shortName));
+      if (match) {
+        this.cachedMuniId = match.id;
+        CityData.activeMunicipalityId = match.id;
+        return;
+      }
+    }
+
+    this.cachedMuniId = CityData.activeMunicipalityId || 'TAL-TDMC';
+  },
+
+  getActiveMunicipalityId() {
+    if (this.cachedMuniId) return this.cachedMuniId;
+    this.initActiveMunicipality();
+    return this.cachedMuniId || 'TAL-TDMC';
+  },
+
+  getActiveMunicipality() {
+    const id = this.getActiveMunicipalityId();
+    return (CityData.municipalities || []).find(m => m.id === id) || (CityData.municipalities && CityData.municipalities[0]);
+  },
+
+  setActiveMunicipality(muniId) {
+    const muni = (CityData.municipalities || []).find(m => m.id === muniId);
+    if (!muni) return;
+    this.cachedMuniId = muniId;
+    CityData.activeMunicipalityId = muniId;
+    try {
+      localStorage.setItem('cityassist_active_municipality', muniId);
+    } catch(e) {}
+
+    this.updateMunicipalityBannerUI();
+    this.renderProfessionals();
+    CityAssist.closeModal();
+    CityAssist.showToast(`📍 Switched to ${muni.name}`);
+  },
+
+  updateMunicipalityBannerUI() {
+    const muni = this.getActiveMunicipality();
+    if (!muni) return;
+
+    // 1. Top Council Tag in Services Hero
+    const tagEl = document.getElementById('services-active-muni-text');
+    if (tagEl) {
+      tagEl.textContent = `📍 ${muni.name}`;
+    }
+
+    // 2. Emergency 24x7 Helpline Strip
+    const phoneEl = document.getElementById('services-emergency-phone-number');
+    if (phoneEl) {
+      phoneEl.textContent = muni.helpline || muni.emergencyPhone || "1800-233-0244";
+    }
+    const labelEl = document.getElementById('services-emergency-muni-label');
+    if (labelEl) {
+      labelEl.textContent = `${muni.shortName} Civic Control Room:`;
+    }
+  },
+
+  dialActiveHelpline(event) {
+    if (event) event.stopPropagation();
+    const muni = this.getActiveMunicipality();
+    const phone = muni ? (muni.helpline || muni.emergencyPhone) : "1800-233-0244";
+    CityAssist.showToast(`Connecting to ${muni ? muni.shortName : 'Civic'} Helpline: ${phone}... 📞`);
+    window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
+  },
+
+  openMunicipalityPickerModal() {
+    const currentId = this.getActiveMunicipalityId();
+    const municipalities = CityData.municipalities || [];
+    
+    const content = `
+      <div style="padding:4px 0 16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.3rem;">🏛️</span>
+            <div>
+              <h3 style="font-size:1.05rem; font-weight:800; color:#0F172A; margin:0;">Select Your Municipality</h3>
+              <p style="font-size:0.75rem; color:#64748B; margin:1px 0 0;">View localized civic helplines, wards & squads</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Search -->
+        <div style="position:relative; margin-bottom:14px;">
+          <input type="text" id="muni-picker-search" placeholder="Search city or council..." oninput="ServicesEngine.filterMunicipalityList(this.value)" style="width:100%; box-sizing:border-box; padding:10px 12px 10px 36px; border:1.5px solid #E2E8F0; border-radius:12px; font-size:0.85rem; font-family:inherit; outline:none;" />
+          <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:0.9rem; color:#94A3B8;">🔍</span>
+        </div>
+
+        <!-- Municipality List -->
+        <div id="muni-picker-list" style="display:flex; flex-direction:column; gap:10px; max-height:380px; overflow-y:auto; padding-right:2px;">
+          ${municipalities.map(m => {
+            const isSelected = m.id === currentId;
+            return `
+              <div class="muni-picker-card" onclick="ServicesEngine.setActiveMunicipality('${m.id}')" style="background:${isSelected ? '#F0FDF4' : '#FFFFFF'}; border:1.5px solid ${isSelected ? '#16A34A' : '#E2E8F0'}; border-radius:14px; padding:12px 14px; cursor:pointer; transition:all 0.15s ease; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+                <div style="flex:1;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <strong style="font-size:0.92rem; color:#0F172A;">${m.name}</strong>
+                    <span style="background:${m.badgeColor || '#0F7943'}; color:#FFF; font-size:0.62rem; font-weight:800; padding:2px 6px; border-radius:6px;">${m.shortName}</span>
+                  </div>
+                  <div style="font-size:0.75rem; color:#64748B; margin-top:3px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span>📍 ${m.city}, ${m.district}</span>
+                    <span>•</span>
+                    <span>📞 <strong>${m.helpline}</strong></span>
+                  </div>
+                  <div style="font-size:0.7rem; color:#059669; font-weight:700; margin-top:3px;">
+                    ✓ ${(m.wards || []).length} Administrative Wards / Zones Available
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                  ${isSelected ? `
+                    <div style="width:24px; height:24px; border-radius:50%; background:#16A34A; color:#FFF; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:900;">✓</div>
+                  ` : `
+                    <div style="width:24px; height:24px; border-radius:50%; border:2px solid #CBD5E1;"></div>
+                  `}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <!-- Auto Detect GPS Button -->
+        <button type="button" onclick="ServicesEngine.autoDetectMunicipalityFromGPS()" style="margin-top:14px; width:100%; background:#F8FAFC; border:1px solid #CBD5E1; color:#1E293B; border-radius:12px; padding:11px; font-size:0.82rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <span>🛰️</span>
+          <span>Auto-Detect Municipality from GPS Location</span>
+        </button>
+      </div>
+    `;
+    CityAssist.openModal(content);
+  },
+
+  filterMunicipalityList(query) {
+    const q = (query || '').toLowerCase().trim();
+    document.querySelectorAll('.muni-picker-card').forEach(card => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = text.includes(q) ? 'flex' : 'none';
+    });
+  },
+
+  autoDetectMunicipalityFromGPS() {
+    CityAssist.showToast("Detecting device GPS coordinates... 🛰️");
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          let nearest = null;
+          let minDist = Infinity;
+          (CityData.municipalities || []).forEach(m => {
+            if (m.coordinates) {
+              const d = Math.hypot(lat - m.coordinates.lat, lng - m.coordinates.lng);
+              if (d < minDist) {
+                minDist = d;
+                nearest = m;
+              }
+            }
+          });
+          if (nearest) {
+            this.setActiveMunicipality(nearest.id);
+            CityAssist.showToast(`🛰️ GPS matched: ${nearest.name}!`);
+          }
+        },
+        (err) => {
+          CityAssist.showToast("Could not access GPS. Defaulted to Talegaon Dabhade.");
+          this.setActiveMunicipality('TAL-TDMC');
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      CityAssist.showToast("Geolocation is not supported on this device.");
+    }
   },
 
   loadSquadsFromStorage() {
@@ -5146,19 +5335,35 @@ const ServicesEngine = {
     const container = document.getElementById('professionals-list-feed');
     if (!container) return;
 
-    const isAdmin = typeof AuthEngine !== 'undefined' && 
-                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    this.updateMunicipalityBannerUI();
+
+    const activeMuniId = this.getActiveMunicipalityId();
+    const activeMuni = this.getActiveMunicipality();
+
+    // Check RBAC admin authorization: Admin can only manage squads in their assigned municipality
+    const isStaffAdmin = typeof AuthEngine !== 'undefined' && 
+                         (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    
+    let isAuthorizedForThisMuni = false;
+    if (isStaffAdmin) {
+      const userMuni = (AuthEngine && AuthEngine.currentUser && AuthEngine.currentUser.municipalityId) || 'TAL-TDMC';
+      isAuthorizedForThisMuni = (userMuni === activeMuniId) ||
+                               (userMuni.includes('TAL') && activeMuniId.includes('TAL')) ||
+                               (userMuni.includes('PMC') && activeMuniId === 'MH-PMC') ||
+                               (userMuni.includes('PCMC') && activeMuniId === 'MH-PCMC') ||
+                               (userMuni.includes('BMC') && activeMuniId === 'MH-BMC');
+    }
 
     const list = filtered || this.getFilteredPros();
 
     let adminBannerHtml = '';
-    if (isAdmin) {
+    if (isAuthorizedForThisMuni) {
       adminBannerHtml = `
         <div style="background:rgba(255,255,255,0.12); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.25); border-radius:14px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.06);">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:1.15rem;">🛡️</span>
             <div>
-              <div style="font-size:0.8rem; font-weight:800; color:#FEF3C7; line-height:1.2;">Admin Directory Control</div>
+              <div style="font-size:0.8rem; font-weight:800; color:#FEF3C7; line-height:1.2;">Admin Directory Control (${activeMuni ? activeMuni.shortName : 'Civic'})</div>
               <div style="font-size:0.68rem; color:#E2E8F0; opacity:0.9;">Edit squad contact helplines or add new units</div>
             </div>
           </div>
@@ -5173,8 +5378,13 @@ const ServicesEngine = {
       container.innerHTML = adminBannerHtml + `
         <div class="muni-squad-white-card" style="text-align:center; padding:28px 12px; color:#64748B;">
           <div style="font-size:2.2rem; margin-bottom:6px;">🏛️</div>
-          <p style="font-size:0.92rem; font-weight:800; color:#1E293B; margin:0;">No municipal squad found</p>
-          <p style="font-size:0.78rem; margin-top:2px; color:#64748B;">Tap "See All" to view all municipal response teams.</p>
+          <p style="font-size:0.92rem; font-weight:800; color:#1E293B; margin:0;">No municipal squads listed for ${activeMuni ? activeMuni.name : 'this area'}</p>
+          <p style="font-size:0.78rem; margin-top:4px; color:#64748B;">Use the 24x7 Helpline above or tap "Change" to switch municipal jurisdiction.</p>
+          ${isAuthorizedForThisMuni ? `
+            <button type="button" onclick="ServicesEngine.openAddSquadModal()" style="margin-top:10px; background:#0F7943; color:#FFF; border:none; padding:8px 16px; border-radius:10px; font-size:0.8rem; font-weight:800; cursor:pointer;">
+              + Add First Squad for ${activeMuni ? activeMuni.shortName : 'Council'}
+            </button>
+          ` : ''}
         </div>
       `;
       return;
@@ -5213,7 +5423,7 @@ const ServicesEngine = {
             <div style="font-size:0.7rem; color:#64748B; margin-top:1px;">(${pro.reviews} resolved)</div>
             
             <div style="display:flex; align-items:center; gap:6px; margin-top:6px;">
-              ${isAdmin ? `
+              ${isAuthorizedForThisMuni ? `
                 <button type="button" onclick="event.stopPropagation(); ServicesEngine.openEditSquadModal('${pro.id}')" style="background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:8px; padding:5px 8px; font-size:0.72rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 1px 3px rgba(0,0,0,0.05);" title="Edit Squad & Helpline Info">
                   ✏️ Edit
                 </button>
@@ -5242,9 +5452,9 @@ const ServicesEngine = {
   },
 
   openEditSquadModal(squadId) {
-    const isAdmin = typeof AuthEngine !== 'undefined' && 
-                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
-    if (!isAdmin) {
+    const isStaffAdmin = typeof AuthEngine !== 'undefined' && 
+                         (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    if (!isStaffAdmin) {
       CityAssist.showToast("⛔ Unauthorized: Only Municipality Administrators can edit squad contacts.");
       return;
     }
@@ -5255,11 +5465,16 @@ const ServicesEngine = {
       return;
     }
 
+    const activeMuni = this.getActiveMunicipality();
+
     const modalHtml = `
       <div class="modal-header-block" style="text-align:center; padding-bottom:6px;">
         <div style="font-size:2.2rem; margin-bottom:4px;">✏️</div>
         <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Edit Municipal Squad</h3>
         <p style="color:#64748B; font-size:0.8rem;">Update helpline contact numbers and in-charge officer details for citizens</p>
+        <div style="display:inline-block; margin-top:4px; background:#F0FDF4; border:1px solid #86EFAC; color:#15803D; font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:12px;">
+          🏛️ ${activeMuni ? activeMuni.name : 'Municipal Council'}
+        </div>
       </div>
 
       <form onsubmit="ServicesEngine.saveSquad(event, '${pro.id}')" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
@@ -5330,24 +5545,29 @@ const ServicesEngine = {
   },
 
   openAddSquadModal() {
-    const isAdmin = typeof AuthEngine !== 'undefined' && 
-                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
-    if (!isAdmin) {
+    const isStaffAdmin = typeof AuthEngine !== 'undefined' && 
+                         (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    if (!isStaffAdmin) {
       CityAssist.showToast("⛔ Unauthorized: Only Municipality Administrators can add squads.");
       return;
     }
+
+    const activeMuni = this.getActiveMunicipality();
 
     const modalHtml = `
       <div class="modal-header-block" style="text-align:center; padding-bottom:6px;">
         <div style="font-size:2.2rem; margin-bottom:4px;">➕</div>
         <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">Add Municipal Squad</h3>
         <p style="color:#64748B; font-size:0.8rem;">Register a new response unit or verified civic service provider</p>
+        <div style="display:inline-block; margin-top:4px; background:#F0FDF4; border:1px solid #86EFAC; color:#15803D; font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:12px;">
+          🏛️ ${activeMuni ? activeMuni.name : 'Municipal Council'}
+        </div>
       </div>
 
       <form onsubmit="ServicesEngine.saveSquad(event, null)" style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
         <div>
           <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Squad / Division Name *</label>
-          <input type="text" id="edit-squad-name" required placeholder="e.g. Talegaon Drainage & Sewage Response" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          <input type="text" id="edit-squad-name" required placeholder="e.g. ${activeMuni ? activeMuni.shortName : 'Civic'} Sanitation Response Unit" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -5373,7 +5593,7 @@ const ServicesEngine = {
 
         <div>
           <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">📞 Official Helpline / Phone Number *</label>
-          <input type="tel" id="edit-squad-phone" required placeholder="e.g. 02114-222129 or 9822012345" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.88rem; font-weight:800; color:#0F7943;">
+          <input type="tel" id="edit-squad-phone" required placeholder="e.g. ${activeMuni ? (activeMuni.emergencyPhone || activeMuni.helpline) : '1800-233-0244'}" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.88rem; font-weight:800; color:#0F7943;">
         </div>
 
         <div>
@@ -5383,12 +5603,12 @@ const ServicesEngine = {
 
         <div>
           <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Operating Ward / Zone</label>
-          <input type="text" id="edit-squad-distance" value="Talegaon Municipal Jurisdiction" placeholder="e.g. Ward 1, 2, 3 All Sectors" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          <input type="text" id="edit-squad-distance" value="${activeMuni ? activeMuni.name : 'Municipal Jurisdiction'}" placeholder="e.g. Zone 1, Sector 4 Division" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
         </div>
 
         <div>
           <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Live Duty Status</label>
-          <input type="text" id="edit-squad-status" value="🟢 Rapid Jetting Unit Active" placeholder="e.g. 🟢 Ready on Call" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
+          <input type="text" id="edit-squad-status" value="🟢 Rapid Unit Active" placeholder="e.g. 🟢 Ready on Call" style="width:100%; padding:10px 12px; border:1.5px solid #CBD5E1; border-radius:10px; font-size:0.85rem; font-weight:600;">
         </div>
 
         <div>
@@ -5412,19 +5632,22 @@ const ServicesEngine = {
 
   async saveSquad(event, proId) {
     if (event) event.preventDefault();
-    const isAdmin = typeof AuthEngine !== 'undefined' && 
-                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
-    if (!isAdmin) {
+    const isStaffAdmin = typeof AuthEngine !== 'undefined' && 
+                         (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    if (!isStaffAdmin) {
       CityAssist.showToast("⛔ Unauthorized action.");
       return;
     }
+
+    const activeMuniId = this.getActiveMunicipalityId();
+    const activeMuni = this.getActiveMunicipality();
 
     const name = document.getElementById('edit-squad-name')?.value?.trim();
     const category = document.getElementById('edit-squad-category')?.value || 'other';
     const categoryLabel = document.getElementById('edit-squad-catlabel')?.value?.trim() || this.getDefaultCatLabel(category);
     const phone = document.getElementById('edit-squad-phone')?.value?.trim();
     const officer = document.getElementById('edit-squad-officer')?.value?.trim() || 'Municipal Duty Officer';
-    const distance = document.getElementById('edit-squad-distance')?.value?.trim() || 'Talegaon Dabhade Jurisdiction';
+    const distance = document.getElementById('edit-squad-distance')?.value?.trim() || (activeMuni ? activeMuni.name : 'Municipal Jurisdiction');
     const status = document.getElementById('edit-squad-status')?.value?.trim() || '🟢 On Duty • Serving Citizenry';
     const desc = document.getElementById('edit-squad-desc')?.value?.trim() || 'Rapid municipal response unit.';
 
@@ -5443,6 +5666,7 @@ const ServicesEngine = {
 
     const targetSquad = {
       id: squadId,
+      municipalityId: activeMuniId,
       name: name,
       category: category,
       categoryLabel: categoryLabel,
@@ -5452,7 +5676,7 @@ const ServicesEngine = {
       distance: distance,
       status: status,
       phone: phone,
-      experience: "Talegaon Municipal Council",
+      experience: activeMuni ? activeMuni.name : "Municipal Corporation",
       rate: "Official Municipal Wing",
       avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}&backgroundColor=bbf7d0`,
       verified: true,
@@ -5473,7 +5697,7 @@ const ServicesEngine = {
 
     this.saveSquadsToStorage();
 
-    // Sync to Cloud Firestore
+    // Sync to Cloud Firestore with municipalityId indexing
     if (typeof firebase !== 'undefined' && firebase.firestore) {
       try {
         const db = firebase.firestore();
@@ -5511,10 +5735,18 @@ const ServicesEngine = {
   },
 
   getFilteredPros() {
+    const activeMuniId = this.getActiveMunicipalityId();
+    // 1. Filter by active municipality
+    let list = (CityData.professionals || []).filter(p => {
+      const pMuni = p.municipalityId || 'TAL-TDMC';
+      return pMuni === activeMuniId;
+    });
+
+    // 2. Filter by category
     if (this.currentCategory === 'all') {
-      return CityData.professionals;
+      return list;
     }
-    return CityData.professionals.filter(p => p.category === this.currentCategory);
+    return list.filter(p => p.category === this.currentCategory);
   },
 
   filterCategory(category, element) {
@@ -5798,8 +6030,20 @@ const ServicesEngine = {
     const pro = CityData.professionals.find(p => p.id === proId);
     if (!pro) return;
 
-    const isAdmin = typeof AuthEngine !== 'undefined' && 
-                    (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    const activeMuniId = this.getActiveMunicipalityId();
+    const activeMuni = (CityData.municipalities || []).find(m => m.id === (pro.municipalityId || activeMuniId)) || this.getActiveMunicipality();
+
+    const isStaffAdmin = typeof AuthEngine !== 'undefined' && 
+                         (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    let isAuthorizedForThisMuni = false;
+    if (isStaffAdmin) {
+      const userMuni = (AuthEngine && AuthEngine.currentUser && AuthEngine.currentUser.municipalityId) || 'TAL-TDMC';
+      isAuthorizedForThisMuni = (userMuni === pro.municipalityId) ||
+                               (userMuni.includes('TAL') && (pro.municipalityId || '').includes('TAL')) ||
+                               (userMuni.includes('PMC') && pro.municipalityId === 'MH-PMC') ||
+                               (userMuni.includes('PCMC') && pro.municipalityId === 'MH-PCMC') ||
+                               (userMuni.includes('BMC') && pro.municipalityId === 'MH-BMC');
+    }
 
     CityAssist.openModal(`
       <div class="modal-header-block" style="text-align:center;">
@@ -5809,7 +6053,7 @@ const ServicesEngine = {
         </div>
         <h3 style="font-size:1.25rem; font-weight:800; color:#0F172A; margin-bottom:2px;">${pro.name}</h3>
         <span style="display:inline-block; background:#DCFCE7; color:#15803D; font-size:0.75rem; font-weight:800; padding:2px 10px; border-radius:12px; margin-bottom:12px;">
-          PMC Official Division ✓
+          ${activeMuni ? activeMuni.shortName : 'Civic'} Official Division ✓
         </span>
       </div>
 
@@ -5840,7 +6084,7 @@ const ServicesEngine = {
         <strong>Department Mandate:</strong> ${pro.description}
       </div>
 
-      ${isAdmin ? `
+      ${isAuthorizedForThisMuni ? `
         <div style="margin-bottom:12px;">
           <button type="button" onclick="CityAssist.closeModal(); ServicesEngine.openEditSquadModal('${pro.id}');" style="width:100%; background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; border-radius:10px; padding:10px; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
             ✏️ Edit Squad & Contact Details (Admin Only)

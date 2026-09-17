@@ -1467,7 +1467,12 @@
                     </svg>
                   </div>
                   <div class="muni-hero-banner-text">
-                    <div class="muni-council-tag">📍 Talegaon Dabhade Municipal Council</div>
+                    <div class="muni-council-tag" id="services-active-muni-pill" onclick="ServicesEngine.openMunicipalityPickerModal()" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;" title="Change City / Municipality">
+                      <span id="services-active-muni-text">📍 Talegaon Dabhade Municipal Council</span>
+                      <span style="font-size:0.65rem; background:rgba(255,255,255,0.28); padding:2px 8px; border-radius:12px; font-weight:800; display:inline-flex; align-items:center; gap:3px;">
+                        Change <span style="font-size:0.55rem;">▼</span>
+                      </span>
+                    </div>
                     <h2>Civic Services &amp; Squads</h2>
                     <p>Report issues, track progress &amp; connect with rapid response squads.</p>
                   </div>
@@ -1682,12 +1687,12 @@
               </div>
 
               <!-- 6. 24x7 Emergency Grievance Strip -->
-              <div class="muni-emergency-strip" onclick="CityAssist.navigateTo('emergency')">
-                <div class="muni-emergency-strip-left">
+              <div class="muni-emergency-strip" id="services-emergency-strip">
+                <div class="muni-emergency-strip-left" onclick="CityAssist.navigateTo('emergency')" style="cursor:pointer; flex:1;">
                   <span class="muni-emergency-badge">🚨 24x7 HELPLINE</span>
-                  <div class="muni-emergency-title">Toll-Free Civic Control Room: <strong>1800-233-0244</strong></div>
+                  <div class="muni-emergency-title"><span id="services-emergency-muni-label">Civic Control Room:</span> <strong id="services-emergency-phone-number">1800-233-0244</strong></div>
                 </div>
-                <button type="button" class="muni-emergency-action-btn">
+                <button type="button" class="muni-emergency-action-btn" id="services-emergency-sos-btn" onclick="ServicesEngine.dialActiveHelpline(event)">
                   SOS Call ➜
                 </button>
               </div>
