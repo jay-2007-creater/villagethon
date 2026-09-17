@@ -229,6 +229,8 @@ const CityAssist = {
     } else if (screenId === 'services' && typeof ServicesEngine !== 'undefined') {
       ServicesEngine.updateMunicipalityBannerUI();
       ServicesEngine.renderProfessionals();
+    } else if (screenId === 'notices' && typeof NoticesEngine !== 'undefined') {
+      NoticesEngine.renderNoticesScreen();
     }
   },
 
@@ -5146,6 +5148,9 @@ const ServicesEngine = {
 
     this.updateMunicipalityBannerUI();
     this.renderProfessionals();
+    if (typeof NoticesEngine !== 'undefined') {
+      NoticesEngine.renderNoticesScreen();
+    }
     CityAssist.closeModal();
     CityAssist.showToast(`📍 Switched to ${muni.name}`);
   },
@@ -6176,12 +6181,554 @@ Powered by CityAssist — Smart Municipal App`;
   }
 };
 
+/* ==========================================================================
+   MUNICIPAL NOTICES & ANNOUNCEMENTS ENGINE
+   Multi-tenant, geographically scoped citizen bulletin system with strict RBAC.
+   ========================================================================== */
+const NoticesEngine = {
+  activeCategory: 'all',
+  searchQuery: '',
+
+  init() {
+    this.loadFromStorage();
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.listenToMunicipalNotices) {
+      FirebaseService.listenToMunicipalNotices((remoteNotices) => {
+        if (Array.isArray(remoteNotices) && remoteNotices.length > 0) {
+          remoteNotices.forEach(rn => {
+            const idx = CityData.municipalNotices.findIndex(n => n.id === rn.id);
+            if (idx >= 0) {
+              CityData.municipalNotices[idx] = rn;
+            } else {
+              CityData.municipalNotices.unshift(rn);
+            }
+          });
+          this.renderNoticesList();
+        }
+      });
+    }
+  },
+
+  loadFromStorage() {
+    try {
+      const saved = localStorage.getItem('cityassist_municipal_notices');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const idSet = new Set(parsed.map(n => n.id));
+          const defaults = (CityData.municipalNotices || []).filter(n => !idSet.has(n.id));
+          CityData.municipalNotices = [...parsed, ...defaults];
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load notices from localStorage:', e);
+    }
+  },
+
+  saveToStorage() {
+    try {
+      localStorage.setItem('cityassist_municipal_notices', JSON.stringify(CityData.municipalNotices || []));
+    } catch (e) {
+      console.warn('Could not save notices to localStorage:', e);
+    }
+  },
+
+  getActiveMunicipalityId() {
+    if (typeof ServicesEngine !== 'undefined' && ServicesEngine.getActiveMunicipalityId) {
+      return ServicesEngine.getActiveMunicipalityId();
+    }
+    return CityData.activeMunicipalityId || 'TAL-TDMC';
+  },
+
+  getActiveMunicipality() {
+    if (typeof ServicesEngine !== 'undefined' && ServicesEngine.getActiveMunicipality) {
+      return ServicesEngine.getActiveMunicipality();
+    }
+    const id = this.getActiveMunicipalityId();
+    return (CityData.municipalities || []).find(m => m.id === id) || (CityData.municipalities && CityData.municipalities[0]);
+  },
+
+  /**
+   * RBAC Security Guard:
+   * Only Municipality Administrators and Municipal Officials can write/publish notices.
+   * Citizens and Drivers CANNOT publish notices.
+   */
+  isAuthorizedToPublish() {
+    if (typeof AuthEngine === 'undefined') return false;
+    const user = AuthEngine.currentUser;
+    if (!user) return false;
+    
+    const isStaffAdmin = AuthEngine.hasPermission('staff_admin') || user.role === 'admin';
+    const isOfficer = AuthEngine.isAuthorizedForRole('officer') || user.role === 'officer';
+    const hasPublishPerm = AuthEngine.hasPermission('publish_advisories');
+
+    return isStaffAdmin || isOfficer || hasPublishPerm;
+  },
+
+  canManageNotice(notice) {
+    if (!this.isAuthorizedToPublish()) return false;
+    const user = AuthEngine.currentUser;
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    const userMuni = user.municipalityId || 'TAL-TDMC';
+    return userMuni === notice.municipalityId || userMuni.includes(notice.municipalityId);
+  },
+
+  renderNoticesScreen() {
+    const muni = this.getActiveMunicipality();
+    if (!muni) return;
+
+    // 1. Update council badge & header subtitle
+    const pillName = document.getElementById('notices-active-muni-name');
+    if (pillName) {
+      pillName.textContent = `📍 ${muni.name} (${muni.shortName})`;
+    }
+    const subTitle = document.getElementById('notices-active-muni-subtitle');
+    if (subTitle) {
+      subTitle.textContent = `${muni.shortName} Official Citizen Bulletins & Advisories`;
+    }
+
+    // 2. RBAC: Only show "+ Publish Notice" action button if user is Admin or Officer
+    const actionContainer = document.getElementById('notices-admin-header-action');
+    if (actionContainer) {
+      if (this.isAuthorizedToPublish()) {
+        actionContainer.innerHTML = `
+          <button type="button" onclick="NoticesEngine.openPublishNoticeModal()" class="primary-green-btn" style="background:#22C55E; color:#0F172A; font-weight:800; font-size:0.75rem; padding:6px 12px; border-radius:8px; border:none; display:flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(34,197,94,0.3); cursor:pointer;">
+            <span>📢 + Publish Notice</span>
+          </button>
+        `;
+      } else {
+        actionContainer.innerHTML = '';
+      }
+    }
+
+    // 3. Render notices list
+    this.renderNoticesList();
+  },
+
+  filterCategory(category) {
+    this.activeCategory = category || 'all';
+    const chips = document.querySelectorAll('#notices-filter-chips .filter-pill');
+    chips.forEach(chip => {
+      if (chip.dataset.category === this.activeCategory) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+    this.renderNoticesList();
+  },
+
+  handleSearch(query) {
+    this.searchQuery = (query || '').trim().toLowerCase();
+    this.renderNoticesList();
+  },
+
+  renderNoticesList() {
+    const feed = document.getElementById('notices-cards-feed');
+    if (!feed) return;
+
+    const activeMuniId = this.getActiveMunicipalityId();
+    const activeMuni = this.getActiveMunicipality();
+
+    // STRICT GEOGRAPHIC SCOPING: Notice must belong to current active municipality
+    let list = (CityData.municipalNotices || []).filter(notice => {
+      return notice.municipalityId === activeMuniId;
+    });
+
+    // Filter by Category
+    if (this.activeCategory !== 'all') {
+      if (this.activeCategory === 'urgent') {
+        list = list.filter(n => n.priority === 'urgent');
+      } else {
+        list = list.filter(n => n.category === this.activeCategory);
+      }
+    }
+
+    // Filter by Search Query
+    if (this.searchQuery) {
+      list = list.filter(n => {
+        const text = `${n.title} ${n.body} ${n.targetWard} ${n.author} ${n.categoryLabel}`.toLowerCase();
+        return text.includes(this.searchQuery);
+      });
+    }
+
+    // Update count badge
+    const badge = document.getElementById('notices-count-badge');
+    if (badge) {
+      badge.textContent = `${list.length} ${list.length === 1 ? 'Notice' : 'Notices'}`;
+    }
+
+    // Empty state
+    if (list.length === 0) {
+      const isFiltered = this.activeCategory !== 'all' || this.searchQuery;
+      feed.innerHTML = `
+        <div class="notices-empty-state">
+          <div class="notices-empty-icon">🏛️</div>
+          <h4 class="notices-empty-title">${isFiltered ? 'No matching notices found' : `No active notices for ${activeMuni ? activeMuni.shortName : 'your area'}`}</h4>
+          <p class="notices-empty-desc">
+            ${isFiltered ? 'Try clearing search or choosing another category filter.' : 'All municipal services, water lines and collection squads are operating on regular schedule.'}
+          </p>
+          ${this.isAuthorizedToPublish() ? `
+            <div style="margin-top:16px;">
+              <button type="button" onclick="NoticesEngine.openPublishNoticeModal()" style="background:#0F7943; color:#FFF; border:none; padding:10px 18px; border-radius:10px; font-weight:800; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <span>📢 Publish First Notice for ${activeMuni ? activeMuni.shortName : 'Council'}</span>
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      return;
+    }
+
+    // Render cards
+    feed.innerHTML = list.map(notice => {
+      const isUrgent = notice.priority === 'urgent';
+      const isHigh = notice.priority === 'high';
+      const priorityClass = isUrgent ? 'urgent' : (isHigh ? 'high' : 'normal');
+      const priorityText = isUrgent ? '🚨 URGENT RED ALERT' : (isHigh ? '🟡 HIGH ADVISORY' : '🟢 PUBLIC NOTICE');
+      const canManage = this.canManageNotice(notice);
+
+      return `
+        <div class="notice-card ${priorityClass}" onclick="NoticesEngine.openNoticeDetailModal('${notice.id}')">
+          <div class="notice-card-top-row">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="notice-priority-badge ${priorityClass}">
+                ${priorityText}
+              </span>
+              <span class="notice-category-pill">
+                ${notice.categoryLabel || notice.category}
+              </span>
+            </div>
+            <div class="notice-date-stamp">
+              📅 ${notice.date}
+            </div>
+          </div>
+
+          <h3 class="notice-card-title">${notice.title}</h3>
+          
+          <p class="notice-card-body-snippet">${notice.body}</p>
+
+          <div class="notice-card-footer">
+            <div class="notice-ward-pill" title="Target Area">
+              <span>📍</span>
+              <span>${notice.targetWard || 'All Wards'}</span>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="notice-issuer-seal" title="Verified Authority">
+                <span class="verified-check">✅</span>
+                <span>${notice.author}</span>
+              </div>
+              ${canManage ? `
+                <button type="button" onclick="NoticesEngine.deleteNotice('${notice.id}', event)" title="Delete Notice (Admin/Officer only)" style="background:#FEE2E2; color:#DC2626; border:none; width:26px; height:26px; border-radius:6px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                  ✕
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  openPublishNoticeModal() {
+    if (!this.isAuthorizedToPublish()) {
+      CityAssist.showToast("⛔ Restricted: Only Municipal Administrators and Officials can write notices.");
+      return;
+    }
+
+    const activeMuni = this.getActiveMunicipality();
+    const user = AuthEngine.currentUser;
+    const authorName = user ? (user.name || user.email || 'Municipal Official') : 'Municipal Officer';
+    const authorRole = user ? (user.role === 'admin' ? 'Municipality Administrator' : 'Chief Municipal Officer') : 'Municipal Officer';
+    const wards = (activeMuni && activeMuni.wards) ? activeMuni.wards : [];
+
+    const content = `
+      <div style="padding:4px 0 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.4rem;">📢</span>
+            <div>
+              <h3 style="font-size:1.08rem; font-weight:900; color:#0F172A; margin:0;">Publish Official Notice / Announcement</h3>
+              <p style="font-size:0.72rem; color:#059669; font-weight:700; margin:1px 0 0;">
+                Target: ${activeMuni ? activeMuni.name : 'Municipal Council'} (${activeMuni ? activeMuni.shortName : ''})
+              </p>
+            </div>
+          </div>
+          <button type="button" onclick="CityAssist.closeModal()" style="background:#F1F5F9; border:none; width:28px; height:28px; border-radius:50%; font-weight:800; cursor:pointer;">✕</button>
+        </div>
+
+        <form id="publish-notice-form" onsubmit="NoticesEngine.publishNotice(event)">
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Notice Headline / Title *</label>
+            <input type="text" id="pnot-title" required placeholder="e.g., Scheduled Drinking Water Pipeline Maintenance" style="width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.86rem; font-weight:700; outline:none;" />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Category *</label>
+              <select id="pnot-category" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.82rem; font-weight:700; background:#FFF; outline:none;">
+                <option value="water">💧 Water Supply</option>
+                <option value="sanitation">♻️ Sanitation & Waste</option>
+                <option value="roads">🚧 Road Works & Traffic</option>
+                <option value="health">🏥 Health & Fogging</option>
+                <option value="urgent">⚡ Power & Streetlights</option>
+                <option value="general">📢 General Circular</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Priority Level *</label>
+              <select id="pnot-priority" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.82rem; font-weight:700; background:#FFF; outline:none;">
+                <option value="normal">🟢 Public Notice</option>
+                <option value="high" selected>🟡 High Advisory</option>
+                <option value="urgent">🔴 Urgent Red Alert</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Target Wards / Area in ${activeMuni ? activeMuni.shortName : 'Council'} *</label>
+            <select id="pnot-ward" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.82rem; font-weight:700; background:#FFF; outline:none;">
+              <option value="All Wards (Entire ${activeMuni ? activeMuni.shortName : 'City'})">All Wards (Entire ${activeMuni ? activeMuni.shortName : 'City'})</option>
+              ${wards.map(w => `<option value="${w.name}">${w.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Effective Schedule / Date</label>
+              <input type="text" id="pnot-schedule" placeholder="e.g. Friday • 10 AM - 04 PM" value="Immediate Effect • 48 Hours" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.82rem; outline:none;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Citizen Helpline</label>
+              <input type="text" id="pnot-helpline" value="${activeMuni ? (activeMuni.helpline || activeMuni.emergencyPhone) : '1800-233-0244'}" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.82rem; outline:none;" />
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:4px;">Detailed Notice Message for Citizens *</label>
+            <textarea id="pnot-message" rows="3" required placeholder="Describe the notice, cause of interruption, emergency standby arrangements, and action required from citizens..." style="width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1.5px solid #CBD5E1; font-size:0.84rem; font-family:inherit; outline:none; resize:vertical;"></textarea>
+          </div>
+
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:8px 12px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:0.74rem; color:#475569;">
+              <strong>Authorized Issuer:</strong> ${authorName} (${authorRole})
+            </div>
+            <span style="font-size:0.72rem; color:#0284C7; font-weight:800;">🏛️ Official Seal Attached</span>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button type="submit" style="flex:1; background:linear-gradient(135deg, #0F7943, #047857); color:#FFF; border:none; padding:13px; border-radius:12px; font-weight:800; font-size:0.92rem; cursor:pointer; box-shadow:0 4px 14px rgba(15,121,67,0.3); display:flex; align-items:center; justify-content:center; gap:6px;">
+              <span>📢 Publish Notice to Citizens</span>
+            </button>
+            <button type="button" onclick="CityAssist.closeModal()" style="background:#F1F5F9; color:#475569; border:none; padding:13px 16px; border-radius:12px; font-weight:800; font-size:0.86rem; cursor:pointer;">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    CityAssist.openModal(content);
+  },
+
+  publishNotice(event) {
+    if (event && event.preventDefault) event.preventDefault();
+
+    if (!this.isAuthorizedToPublish()) {
+      CityAssist.showToast("⛔ Restricted: Only Municipal Administrators and Officials can write notices.");
+      return;
+    }
+
+    const activeMuni = this.getActiveMunicipality();
+    const activeMuniId = this.getActiveMunicipalityId();
+    const user = AuthEngine.currentUser;
+
+    const title = (document.getElementById('pnot-title')?.value || '').trim();
+    const category = document.getElementById('pnot-category')?.value || 'general';
+    const priority = document.getElementById('pnot-priority')?.value || 'normal';
+    const ward = document.getElementById('pnot-ward')?.value || `All Wards (${activeMuni ? activeMuni.shortName : 'City'})`;
+    const schedule = (document.getElementById('pnot-schedule')?.value || '').trim();
+    const helpline = (document.getElementById('pnot-helpline')?.value || '').trim();
+    const message = (document.getElementById('pnot-message')?.value || '').trim();
+
+    if (!title || !message) {
+      CityAssist.showToast("⚠️ Please fill in both headline and notice message.");
+      return;
+    }
+
+    const catLabels = {
+      water: "💧 Water Supply",
+      sanitation: "♻️ Sanitation & Waste",
+      roads: "🚧 Road Works",
+      health: "🏥 Health & Fogging",
+      urgent: "⚡ Power & Utilities",
+      general: "📢 Official Circular"
+    };
+
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const timeFormatted = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    const newNotice = {
+      id: `NOTICE-${activeMuni ? activeMuni.shortName : 'MUNI'}-${Date.now()}`,
+      municipalityId: activeMuniId,
+      municipalityName: activeMuni ? activeMuni.name : 'Municipal Council',
+      title: title,
+      category: category,
+      categoryLabel: catLabels[category] || "📢 Municipal Notice",
+      priority: priority,
+      date: dateFormatted,
+      time: timeFormatted,
+      effectiveSchedule: schedule || "Effective Immediately",
+      targetWard: ward,
+      author: user ? (user.name || user.email || 'Municipal Official') : 'Municipal Officer',
+      designation: user ? (user.role === 'admin' ? 'Municipality Administrator' : 'Municipal Officer') : 'Municipal Officer',
+      officialSeal: `${activeMuni ? activeMuni.shortName : 'Civic'} Administration`,
+      body: message,
+      helpline: helpline || (activeMuni ? activeMuni.helpline : '1800-233-0244'),
+      isPinned: priority === 'urgent'
+    };
+
+    if (!CityData.municipalNotices) CityData.municipalNotices = [];
+    CityData.municipalNotices.unshift(newNotice);
+    this.saveToStorage();
+
+    if (typeof FirebaseService !== 'undefined' && FirebaseService.publishMunicipalNotice) {
+      FirebaseService.publishMunicipalNotice(newNotice);
+    }
+
+    if (typeof NotificationEngine !== 'undefined') {
+      NotificationEngine.addNotification({
+        title: `📢 ${activeMuni ? activeMuni.shortName : 'Notice'}: ${title}`,
+        body: `${message} (${ward})`,
+        type: 'civic'
+      });
+    }
+
+    CityAssist.closeModal();
+    this.renderNoticesList();
+    CityAssist.showToast(`📢 Notice published to ${activeMuni ? activeMuni.shortName : 'Municipal'} citizens!`);
+  },
+
+  openNoticeDetailModal(noticeId) {
+    const notice = (CityData.municipalNotices || []).find(n => n.id === noticeId);
+    if (!notice) return;
+
+    const isUrgent = notice.priority === 'urgent';
+    const isHigh = notice.priority === 'high';
+    const priorityClass = isUrgent ? 'urgent' : (isHigh ? 'high' : 'normal');
+    const priorityText = isUrgent ? '🚨 URGENT RED ALERT' : (isHigh ? '🟡 HIGH PRIORITY ADVISORY' : '🟢 PUBLIC NOTICE');
+    const canManage = this.canManageNotice(notice);
+
+    const content = `
+      <div style="padding:4px 0 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span class="notice-priority-badge ${priorityClass}">${priorityText}</span>
+              <span class="notice-category-pill">${notice.categoryLabel || notice.category}</span>
+            </div>
+            <h3 style="font-size:1.12rem; font-weight:900; color:#0F172A; margin:0; line-height:1.35;">${notice.title}</h3>
+          </div>
+          <button type="button" onclick="CityAssist.closeModal()" style="background:#F1F5F9; border:none; width:30px; height:30px; border-radius:50%; font-weight:800; cursor:pointer; flex-shrink:0;">✕</button>
+        </div>
+
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px; margin-bottom:14px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.75rem;">
+            <span style="color:#0F172A; font-weight:800;">🏛️ ${notice.municipalityName}</span>
+            <span style="color:#64748B;">📅 Published: ${notice.date} ${notice.time ? '• ' + notice.time : ''}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#0F7943; font-weight:700;">
+            <span>📍 Target Area:</span>
+            <span>${notice.targetWard}</span>
+          </div>
+          ${notice.effectiveSchedule ? `
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#D97706; font-weight:700;">
+              <span>⏰ Effective Schedule:</span>
+              <span>${notice.effectiveSchedule}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="font-size:0.88rem; color:#334155; line-height:1.6; margin-bottom:16px; background:#FFF; border-radius:10px; white-space:pre-line;">
+          ${notice.body}
+        </div>
+
+        <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:12px; padding:10px 14px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:0.78rem; font-weight:800; color:#065F46; display:flex; align-items:center; gap:4px;">
+              <span>✅ Verified Civic Circular</span>
+            </div>
+            <div style="font-size:0.72rem; color:#047857; margin-top:2px;">
+              Issued by: <strong>${notice.author}</strong> (${notice.designation || 'Municipal Authority'})
+            </div>
+          </div>
+          <span style="font-size:1.6rem;">🏛️</span>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          ${notice.helpline ? `
+            <button type="button" onclick="window.location.href='tel:${notice.helpline.replace(/\s+/g, '')}'" style="flex:1; background:linear-gradient(135deg, #0284C7, #0369A1); color:#FFF; border:none; padding:12px; border-radius:12px; font-weight:800; font-size:0.86rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <span>📞 Call Helpline (${notice.helpline})</span>
+            </button>
+          ` : ''}
+          <button type="button" onclick="NoticesEngine.shareNotice('${notice.id}')" style="background:#F1F5F9; color:#0F172A; border:1px solid #CBD5E1; padding:12px 16px; border-radius:12px; font-weight:800; font-size:0.86rem; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            <span>🔗 Share</span>
+          </button>
+        </div>
+
+        ${canManage ? `
+          <div style="margin-top:12px; text-align:center;">
+            <button type="button" onclick="NoticesEngine.deleteNotice('${notice.id}')" style="background:none; border:none; color:#DC2626; font-size:0.78rem; font-weight:800; cursor:pointer; text-decoration:underline;">
+              Archive / Delete This Notice (Admin Action)
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    CityAssist.openModal(content);
+  },
+
+  shareNotice(noticeId) {
+    const notice = (CityData.municipalNotices || []).find(n => n.id === noticeId);
+    if (!notice) return;
+    const text = `📢 [${notice.municipalityName}] Official Notice:\n${notice.title}\n\n${notice.body}\n\nTarget: ${notice.targetWard}\nSchedule: ${notice.effectiveSchedule || 'N/A'}\nHelpline: ${notice.helpline || 'N/A'}\n\nIssued via CityAssist Civic App.`;
+    if (navigator.share) {
+      navigator.share({
+        title: notice.title,
+        text: text
+      }).catch(() => {});
+    } else {
+      CityAssist.shareViaClipboard(text);
+    }
+  },
+
+  deleteNotice(noticeId, event) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    if (!this.isAuthorizedToPublish()) {
+      CityAssist.showToast("⛔ Restricted: Only Municipal Administrators and Officials can manage notices.");
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this official notice?")) return;
+
+    CityData.municipalNotices = (CityData.municipalNotices || []).filter(n => n.id !== noticeId);
+    this.saveToStorage();
+    CityAssist.closeModal();
+    this.renderNoticesList();
+    CityAssist.showToast("🗑️ Notice removed.");
+  }
+};
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   CityAssist.init();
   MunicipalityEngine.init();
   CommunityEngine.init();
   ServicesEngine.init();
+  NoticesEngine.init();
 });
 
 

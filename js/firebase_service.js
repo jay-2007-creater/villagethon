@@ -573,6 +573,91 @@ const FirebaseService = {
   },
 
   /**
+   * PUBLISH MULTI-TENANT MUNICIPAL NOTICE / ANNOUNCEMENT
+   * Authorized strictly for Municipal Administrators and Officers
+   */
+  async publishMunicipalNotice(noticeData) {
+    const isStaffAdmin = typeof AuthEngine !== 'undefined' && 
+                         (AuthEngine.hasPermission('staff_admin') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'admin'));
+    const isOfficer = typeof AuthEngine !== 'undefined' && 
+                      (AuthEngine.isAuthorizedForRole('officer') || (AuthEngine.currentUser && AuthEngine.currentUser.role === 'officer'));
+    const hasPublishPerm = typeof AuthEngine !== 'undefined' && AuthEngine.hasPermission('publish_advisories');
+
+    if (!isStaffAdmin && !isOfficer && !hasPublishPerm) {
+      console.warn("⛔ Security: Unauthorized attempt to publish municipal notice.");
+      return { error: 'Unauthorized: Municipal Administrator or Officer role required' };
+    }
+
+    const noticeId = noticeData.id || `NOTICE-${Date.now()}`;
+    const noticeDoc = {
+      id: noticeId,
+      municipalityId: this.sanitize(noticeData.municipalityId || 'TAL-TDMC'),
+      municipalityName: this.sanitize(noticeData.municipalityName || 'Municipal Council'),
+      title: this.sanitize(noticeData.title),
+      category: this.sanitize(noticeData.category || 'general'),
+      categoryLabel: this.sanitize(noticeData.categoryLabel || 'Municipal Notice'),
+      priority: noticeData.priority || 'normal',
+      date: noticeData.date || new Date().toLocaleDateString('en-GB'),
+      time: noticeData.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      effectiveSchedule: this.sanitize(noticeData.effectiveSchedule || 'Immediate Effect'),
+      targetWard: this.sanitize(noticeData.targetWard || 'All Wards'),
+      author: this.sanitize(noticeData.author || 'Municipal Officer'),
+      designation: this.sanitize(noticeData.designation || 'Civic Authority'),
+      officialSeal: this.sanitize(noticeData.officialSeal || 'Municipal Administration'),
+      body: this.sanitize(noticeData.body),
+      helpline: this.sanitize(noticeData.helpline || '1800-233-0244'),
+      isPinned: noticeData.isPinned || false,
+      timestamp: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+
+    if (this.db) {
+      try {
+        await this.db.collection('municipal_notices').doc(noticeId).set(noticeDoc);
+        console.log("✅ Firestore: Municipal Notice published:", noticeId);
+      } catch (e) {
+        console.warn("Firestore municipal notice write err:", e);
+      }
+    }
+
+    if (this.rtdb) {
+      try {
+        await this.rtdb.ref(`municipal_notices/${noticeId}`).set(noticeDoc);
+      } catch (e) {}
+    }
+
+    await this.logAdminAction({
+      action: 'MUNICIPAL_NOTICE_PUBLISHED',
+      recordId: noticeId,
+      targetType: 'notice',
+      details: {
+        noticeId: noticeId,
+        municipalityId: noticeDoc.municipalityId,
+        title: noticeDoc.title,
+        category: noticeDoc.category,
+        priority: noticeDoc.priority,
+        targetWard: noticeDoc.targetWard
+      }
+    });
+
+    return noticeDoc;
+  },
+
+  listenToMunicipalNotices(callback) {
+    if (!this.db || typeof callback !== 'function') return;
+    try {
+      this.db.collection('municipal_notices').orderBy('timestamp', 'desc').limit(25)
+        .onSnapshot((snapshot) => {
+          if (!snapshot.empty) {
+            const notices = [];
+            snapshot.forEach(doc => notices.push(doc.data()));
+            callback(notices);
+          }
+        }, (err) => console.log('Municipal notices snapshot info:', err));
+    } catch (e) {}
+  },
+
+  /**
    * =========================================================================
    * 🚚 VEHICLE TELEMETRY & AREA-ISOLATED WARD FLEET SYNC
    * =========================================================================

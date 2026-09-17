@@ -1040,6 +1040,62 @@
             </div>
           </section>
 
+          <!-- 2B. MUNICIPAL NOTICES & OFFICIAL ANNOUNCEMENTS SCREEN -->
+          <section class="screen-view" id="screen-notices">
+            <div class="screen-header green-theme" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:linear-gradient(135deg, #0F7943, #047857);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button class="icon-action-btn back-btn" onclick="CityAssist.navigateBack()" title="Back">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div>
+                  <h1 class="header-title" style="font-size:1.08rem; margin:0; line-height:1.2; color:#FFFFFF; font-weight:800;">Municipal Notices</h1>
+                  <span id="notices-active-muni-subtitle" style="font-size:0.68rem; color:rgba(255,255,255,0.85); font-weight:600;">Official Citizen Bulletins & Advisories</span>
+                </div>
+              </div>
+              <div id="notices-admin-header-action" style="display:flex; align-items:center; gap:6px;">
+                <!-- Populated dynamically: "+ Publish Notice" button visible ONLY to Municipal Administrators and Officials -->
+              </div>
+            </div>
+
+            <!-- Active Council & Geographic Scope Strip -->
+            <div style="padding:8px 16px; background:#F8FAFC; border-bottom:1px solid #E2E8F0; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <div style="display:flex; align-items:center; gap:6px; cursor:pointer;" onclick="ServicesEngine.openMunicipalityPickerModal()" title="Change Municipality">
+                <span style="font-size:1rem;">🏛️</span>
+                <span id="notices-active-muni-pill" style="font-size:0.75rem; font-weight:800; color:#0F172A; background:#ECFDF5; border:1px solid #A7F3D0; padding:3px 10px; border-radius:20px; display:inline-flex; align-items:center; gap:5px;">
+                  <span id="notices-active-muni-name">📍 Talegaon Dabhade (TDMC)</span>
+                  <span style="font-size:0.65rem; color:#059669;">▼</span>
+                </span>
+              </div>
+              <div id="notices-count-badge" style="font-size:0.72rem; font-weight:800; color:#059669; background:#D1FAE5; padding:3px 8px; border-radius:8px;">
+                Loading...
+              </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div style="padding:10px 16px 6px;">
+              <div style="position:relative;">
+                <input type="text" id="notices-search-input" placeholder="Search notices, wards, pipelines..." oninput="NoticesEngine.handleSearch(this.value)" style="width:100%; box-sizing:border-box; padding:9px 12px 9px 36px; border:1.5px solid #E2E8F0; border-radius:12px; font-size:0.84rem; font-family:inherit; outline:none; background:#FFF;" />
+                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:0.9rem; color:#94A3B8;">🔍</span>
+              </div>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="request-filter-tabs notices-filter-tabs" id="notices-filter-chips" style="padding:4px 16px 10px; overflow-x:auto; display:flex; gap:8px;">
+              <button type="button" class="filter-pill active" data-category="all" onclick="NoticesEngine.filterCategory('all')">All Notices</button>
+              <button type="button" class="filter-pill" data-category="water" onclick="NoticesEngine.filterCategory('water')">💧 Water</button>
+              <button type="button" class="filter-pill" data-category="sanitation" onclick="NoticesEngine.filterCategory('sanitation')">♻️ Sanitation</button>
+              <button type="button" class="filter-pill" data-category="roads" onclick="NoticesEngine.filterCategory('roads')">🚧 Roads</button>
+              <button type="button" class="filter-pill" data-category="health" onclick="NoticesEngine.filterCategory('health')">🏥 Health & Fogging</button>
+              <button type="button" class="filter-pill" data-category="urgent" onclick="NoticesEngine.filterCategory('urgent')">🚨 Urgent</button>
+              <button type="button" class="filter-pill" data-category="general" onclick="NoticesEngine.filterCategory('general')">📢 Circulars</button>
+            </div>
+
+            <!-- Notice Cards Feed Container -->
+            <div class="screen-content notices-feed-content" id="notices-cards-feed" style="padding:4px 16px 32px; display:flex; flex-direction:column; gap:12px; overflow-y:auto;">
+              <!-- Dynamically populated from JS -->
+            </div>
+          </section>
+
           <!-- 3. EMERGENCY HELP SCREEN -->
           <section class="screen-view" id="screen-emergency">
             <div class="screen-header red-theme">
@@ -1974,14 +2030,16 @@
                     <span class="action-tile-label" data-i18n-html="home_action_report">REPORT<br>ISSUE</span>
                   </div>
 
-                  <!-- 2. FIND TECHNICIAN -->
-                  <div class="quick-action-tile" onclick="CityAssist.navigateTo('my-requests')">
+                  <!-- 2. MUNICIPAL NOTICES & ANNOUNCEMENTS -->
+                  <div class="quick-action-tile" onclick="CityAssist.navigateTo('notices')">
                     <div class="action-tile-icon-box bg-soft-blue">
                       <svg viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        <line x1="9" y1="9" x2="15" y2="9"/>
+                        <line x1="9" y1="13" x2="13" y2="13"/>
                       </svg>
                     </div>
-                    <span class="action-tile-label" data-i18n-html="home_action_find_tech">FIND<br>TECHNICIAN</span>
+                    <span class="action-tile-label" data-i18n-html="home_action_notices">MUNICIPAL<br>NOTICES</span>
                   </div>
 
                   <!-- 3. EMERGENCY HELP -->
