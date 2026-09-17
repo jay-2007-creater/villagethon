@@ -6428,7 +6428,10 @@ const NoticesEngine = {
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') + `
+      <!-- Generous bottom clearance buffer so last notice card is never hidden by bottom tab bar -->
+      <div style="height:120px; width:100%; flex-shrink:0; pointer-events:none;" aria-hidden="true"></div>
+    `;
   },
 
   openPublishNoticeModal() {
