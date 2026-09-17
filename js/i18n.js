@@ -47,7 +47,7 @@ const I18nEngine = {
       // Auth Screen
       auth_title: "CityAssist",
       auth_subtitle: "Smart Civic Waste & Live Fleet Operations",
-      auth_muni_tag: "📍 Talegaon Dabhade Municipal Council",
+      auth_muni_tag: "",
       auth_select_role: "Select Your Role",
       role_resident: "Resident",
       role_driver: "Driver",
@@ -64,7 +64,7 @@ const I18nEngine = {
       auth_demo_resident: "Resident (Siddhant)",
       auth_demo_driver: "Driver (Ramesh - MH-12)",
       auth_demo_officer: "PMC Officer (Deshmukh)",
-      auth_terms: "By continuing, you agree to Talegaon Dabhade Municipal Council Civic Terms & Privacy Policy.",
+      auth_terms: "By continuing, you agree to Municipal Civic Terms & Privacy Policy.",
 
       // Home Screen
       home_greeting_morning: "Good Morning,",
@@ -176,7 +176,7 @@ const I18nEngine = {
       // Auth Screen
       auth_title: "CityAssist",
       auth_subtitle: "स्मार्ट नागरी कचरा आणि थेट फ्लीट व्यवस्थापन",
-      auth_muni_tag: "📍 तळेगाव दाभाडे नगरपरिषद",
+      auth_muni_tag: "",
       auth_select_role: "तुमची भूमिका निवडा",
       role_resident: "नागरिक",
       role_driver: "चालक",
@@ -193,7 +193,7 @@ const I18nEngine = {
       auth_demo_resident: "नागरिक (सिद्धार्थ)",
       auth_demo_driver: "चालक (रमेश - MH-12)",
       auth_demo_officer: "मुख्याधिकारी (देशमुख)",
-      auth_terms: "पुढे चालू ठेवून, आपण तळेगाव दाभाडे नगरपरिषदेच्या नागरी अटी व गोपनीयता धोरणास सहमती देता.",
+      auth_terms: "पुढे चालू ठेवून, आपण नागरी अटी व गोपनीयता धोरणास सहमती देता.",
 
       // Home Screen
       home_greeting_morning: "शुभ प्रभात,",
@@ -305,7 +305,7 @@ const I18nEngine = {
       // Auth Screen
       auth_title: "CityAssist",
       auth_subtitle: "स्मार्ट नागरिक कचरा और लाइव फ्लीट संचालन",
-      auth_muni_tag: "📍 तलेगांव दाभाडे नगर परिषद",
+      auth_muni_tag: "",
       auth_select_role: "अपनी भूमिका चुनें",
       role_resident: "नागरिक",
       role_driver: "चालक",
@@ -322,7 +322,7 @@ const I18nEngine = {
       auth_demo_resident: "नागरिक (सिद्धांत)",
       auth_demo_driver: "ड्राइवर (रमेश - MH-12)",
       auth_demo_officer: "नगर अधिकारी (देशमुख)",
-      auth_terms: "जारी रखकर, आप तलेगांव दाभाडे नगर परिषद के नागरिक नियमों और गोपनीयता नीति से सहमत होते हैं।",
+      auth_terms: "जारी रखकर, आप नागरिक नियमों और गोपनीयता नीति से सहमत होते हैं।",
 
       // Home Screen
       home_greeting_morning: "शुभ प्रभात,",

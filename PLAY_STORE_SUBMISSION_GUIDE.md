@@ -63,6 +63,9 @@ Whether you encounter a broken pothole, an uncleared garbage dump, overflowing s
 • Role-Based Access: Secure municipal pre-authorization ensuring full civic transparency.
 
 Built for smarter, cleaner, and more responsive cities.
+
+⚠️ DISCLAIMER:
+CityAssist is an independent civic technology platform developed to facilitate citizen grievance reporting, service provider directories, and municipal fleet tracking. CityAssist is not an official government agency and does not represent any municipal corporation or governmental department.
 ```
 
 ### Categorization:

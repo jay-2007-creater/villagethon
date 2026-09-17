@@ -21,7 +21,7 @@ function copyRecursive(src, dest) {
   }
 }
 
-const itemsToCopy = ['index.html', 'manifest.json', 'sw.js', 'favicon.png', 'assets', 'css', 'js', 'audio'];
+const itemsToCopy = ['index.html', 'manifest.json', 'sw.js', 'favicon.png', 'assets', 'css', 'js', 'audio', 'privacy_policy.html'];
 
 // Copy essential web assets to www
 itemsToCopy.forEach(item => {
