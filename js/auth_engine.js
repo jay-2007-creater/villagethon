@@ -96,7 +96,7 @@ const AuthEngine = {
   ],
 
   currentUser: null,
-  activeLoginTab: 'otp', // 'otp' | 'email'
+  activeLoginTab: 'email', // Default to email while phone SMS OTP is awaiting plan upgrade
   selectedRole: 'citizen', // 'citizen' | 'driver' | 'officer'
   pendingPhone: '',
   pendingGeneratedOTP: null,
@@ -107,6 +107,7 @@ const AuthEngine = {
     this.loadStaffRegistryFromCache();
     this.initFirebase();
     this.restoreSession();
+    this.switchAuthTab('email');
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this.setupOtpInputHandlers());
     } else {
@@ -912,13 +913,15 @@ const AuthEngine = {
    * Switch between Mobile OTP and Email Login Tabs
    */
   switchAuthTab(tab) {
-    this.activeLoginTab = tab || 'otp';
+    this.activeLoginTab = tab || 'email';
     const tabOtp = document.getElementById('auth-method-tab-otp');
     const tabEmail = document.getElementById('auth-method-tab-email');
     const secOtp = document.getElementById('auth-sec-otp');
     const secEmail = document.getElementById('auth-sec-email');
 
-    if (tab === 'otp') {
+    const allowOtp = tab === 'otp' && secOtp && !secOtp.style.display.includes('none !important');
+
+    if (allowOtp) {
       if (tabOtp) tabOtp.classList.add('active');
       if (tabEmail) tabEmail.classList.remove('active');
       if (secOtp) secOtp.style.display = 'block';
