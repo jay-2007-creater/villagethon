@@ -78,12 +78,10 @@ CityAssist is an independent civic technology platform developed to facilitate c
 
 Google Play strictly mandates an HTTPS Privacy Policy URL because the app uses **Camera** and **Location**:
 
-* **Privacy Policy File Created:**  
-  `privacy_policy.html` (Saved in project root & `www/`)  
-* **How to host it for free:**
-  * **Option A (GitHub Pages):** Create a free public repository named `cityassist-privacy`, push `privacy_policy.html`, and activate GitHub Pages (URL: `https://<your-username>.github.io/cityassist-privacy/`).
-  * **Option B (Firebase Hosting):** Run `npx firebase-tools deploy --only hosting` to host at `https://cityassist-7bad3.web.app/privacy.html`.
-  * **Option C (Google Sites):** Copy the text from `privacy_policy.html` and paste it into a free Google Site.
+* **Live Privacy Policy URL (Ready to paste into Play Console):**  
+  👉 **`https://cityassist-7bad3.web.app/privacy.html`**  
+  *(Also accessible via `https://cityassist-7bad3.web.app/privacy`)*  
+  *Status:* 🟢 Deployed & Verified on Firebase Hosting. Includes all mandatory clauses (Camera, Location, TLS 1.3 Encryption, Account Deletion, and Non-Government Entity Disclaimer).
 
 ---
 
@@ -123,9 +121,10 @@ When Google Play asks the Data Safety questions, select these exact answers:
    * Free or paid: `Free`
 3. In the left menu, complete the **Set up your app** tasks:
    * **Privacy Policy:** Paste your live privacy policy URL.
-   * **App access:** Select *"All or some functionality is restricted"* and provide test login credentials:
-     * *Phone:* `+91 84689 84689` with OTP `123456`
-     * *Email:* `siddhantramteke06@gmail.com`
+   * **App access:** Select *"All or some functionality is restricted"* and provide test login instructions for Google reviewers:
+     * *Method:* Email & Password
+     * *Test Citizen Login:* `citizen.demo@gmail.com` with Password `CityAssist@2026` (Reviewers can also tap "Create Citizen Account" to test registration).
+     * *Test Officer Login:* `deshmukh.officer@pmc.gov.in` with Password `CityAssist@2026`
    * **Ads:** Select *"No, my app does not contain ads"*.
    * **Content Rating:** Complete the questionnaire (Ratings will come out as 3+ / Everyone).
    * **Target Audience:** Select `18 and over` (or `16-17`).
