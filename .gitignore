@@ -22,4 +22,9 @@ android/local.properties
 /captures
 .externalNativeBuild
 .cxx
+# Android Keystores & Credentials
+*.jks
+*.keystore
 
+# Firebase
+.firebase/
